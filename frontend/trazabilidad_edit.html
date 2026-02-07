@@ -1,0 +1,723 @@
+<?php
+// PHP include file. Requiere que $base_url esté definido en index.php
+require_once __DIR__ . '/../backend/controllers/AuthController.php'; 
+
+// Protección de ruta: Si no está logueado, redirigir al login
+if (!SessionManager::get('logged_in')) {
+    header('Location: ' . $base_url);
+    exit();
+}
+
+// Verificar que sea administrador
+$user_rol = SessionManager::get('user_rol') ?? 'operador';
+if ($user_rol !== 'admin') {
+    header('Location: ' . $base_url . 'home');
+    exit();
+}
+
+$page_title = "Editar Registro de Trazabilidad";
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo $page_title; ?></title>
+    <link rel="stylesheet" href="<?php echo $base_url; ?>frontend/assets/css/styles.css">
+    <style>
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #374151;
+        }
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 1rem;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #00796B;
+            box-shadow: 0 0 0 3px rgba(0, 121, 107, 0.1);
+        }
+        .btn-primary {
+            background-color: #00796B;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.375rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: #00695C;
+        }
+        .btn-secondary {
+            background-color: #6b7280;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.375rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-secondary:hover {
+            background-color: #4b5563;
+        }
+        .alert {
+            padding: 1rem;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+        }
+        .alert-info {
+            background-color: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+        .alert-error {
+            background-color: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+        .alert-success {
+            background-color: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        .readonly {
+            background-color: #f9fafb;
+            color: #6b7280;
+        }
+
+        /* Iconos de cámara y subir, igual a trazabilidad_form */
+        .upload-icon {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234A5568"><path d="M4 4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-8l-2-2H4z"/></svg>');
+            background-size: cover;
+            cursor: pointer;
+            border: none;
+            padding: 0;
+            background-color: transparent;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        .camera-icon {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2310B981"><path d="M4 4h4l2-2h4l2 2h4a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zm8 4a4 4 0 100 8 4 4 0 000-8zm-2 4a2 2 0 114 0 2 2 0 01-4 0z"/></svg>');
+            background-size: cover;
+            cursor: pointer;
+            border: none;
+            padding: 0;
+            background-color: transparent;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        
+        /* Mejoras responsive para móvil */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .form-input, .form-label {
+                font-size: 16px; /* Previene zoom en iOS */
+            }
+            
+            .btn-primary, .btn-secondary {
+                width: 100%;
+                margin-bottom: 0.5rem;
+                padding: 1rem;
+                font-size: 16px;
+            }
+            
+            .flex.gap-4 {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            /* Asegurar que los selects sean fáciles de usar en móvil */
+            select.form-input {
+                min-height: 3rem;
+                font-size: 16px;
+            }
+            
+            /* Mejorar espaciado en móvil */
+            .form-group {
+                margin-bottom: 1.5rem;
+            }
+            
+            /* Títulos más pequeños en móvil */
+            h2 {
+                font-size: 1.5rem;
+            }
+            
+            h3 {
+                font-size: 1.25rem;
+            }
+            
+            /* Mejorar contenedor de grid en móvil */
+            .grid.grid-cols-1.md\\:grid-cols-2 {
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-200 flex flex-col min-h-screen">
+
+    <!-- Navbar/Header -->
+    <header class="fixed top-0 left-0 right-0 p-4 shadow-md text-white z-10 flex justify-between items-center flex-wrap gap-2">
+        <h1 class="text-xl font-bold accent-underline">Editar Trazabilidad</h1>
+        <nav class="flex flex-wrap gap-3 text-sm items-center">
+            <span class="hidden sm:inline">Hola, <?php echo htmlspecialchars(SessionManager::get('user_nombre') ?? 'Usuario'); ?></span>
+            <a href="<?php echo $base_url; ?>trazabilidad_list" class="hover:opacity-90" title="Volver al listado" aria-label="Volver al listado">
+                <span class="icon icon-lg icon-gold" aria-hidden="true">📋</span>
+            </a>
+            <a href="<?php echo $base_url; ?>home" class="hover:opacity-90" title="Inicio" aria-label="Inicio">
+                <span class="icon icon-lg icon-gold" aria-hidden="true">🏠</span>
+            </a>
+            <a href="#" id="logout-btn" class="hover:opacity-90" title="Cerrar sesión" aria-label="Cerrar sesión">
+                <span aria-hidden="true" class="icon icon-lg icon-gold">⭕</span>
+            </a>
+        </nav>
+    </header>
+
+    <!-- Contenedor Principal -->
+    <main id="app-content" class="container mx-auto p-4 mt-20 flex-grow max-w-4xl">
+        <div class="bg-white p-6 rounded-lg shadow-xl form-card">
+            
+            <div id="loading-message" class="alert alert-info">
+                <strong>Cargando...</strong> Obteniendo datos del registro para edición.
+            </div>
+
+            <div id="error-message" class="alert alert-error" style="display: none;">
+                <strong>Error:</strong> <span id="error-text"></span>
+            </div>
+
+            <div id="edit-form-container" style="display: none;">
+                <h2 class="text-2xl font-semibold mb-6 text-gray-800">
+                    Editar Registro - Consecutivo: <span id="consecutivo-display">---</span>
+                </h2>
+
+                <form id="edit-form">
+                    <input type="hidden" id="consecutivo-hidden" name="consecutivo">
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        <!-- Información de Solo Lectura -->
+                        <div class="col-span-1 md:col-span-2">
+                            <h3 class="text-lg font-semibold mb-4 text-gray-700">Información del Registro</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="form-group">
+                                    <label class="form-label">Fecha de Entrega</label>
+                                    <input type="text" id="fecha-entrega" class="form-input readonly" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Fecha de Recibido</label>
+                                    <input type="text" id="fecha-recibido" class="form-input readonly" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Estado</label>
+                                    <input type="text" id="estado" class="form-input readonly" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Campos Editables -->
+                        <div class="col-span-1 md:col-span-2">
+                            <h3 class="text-lg font-semibold mb-4 text-gray-700">Campos Editables</h3>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="proceso_id" class="form-label">Proceso *</label>
+                            <select id="proceso_id" name="proceso_id" class="form-input" required>
+                                <option value="">Cargando procesos...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="responsable_id" class="form-label">Responsable *</label>
+                            <select id="responsable_id" name="responsable_id" class="form-input" required>
+                                <option value="">Cargando responsables...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="producto_id" class="form-label">Producto *</label>
+                            <select id="producto_id" name="producto_id" class="form-input" required>
+                                <option value="">Cargando productos...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="peso_entregado" class="form-label">Peso Entregado (gr) *</label>
+                            <input type="number" id="peso_entregado" name="peso_entregado" 
+                                   class="form-input" step="0.01" min="0.01" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="peso_recibido" class="form-label">Peso Recibido (gr)</label>
+                            <input type="number" id="peso_recibido" name="peso_recibido" 
+                                   class="form-input" step="0.01" min="0">
+                            <small class="text-gray-600">Dejar vacío si no ha sido recibido</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Peso Ley (gr) - Calculado</label>
+                            <input type="text" id="peso_ley" class="form-input readonly" readonly>
+                            <small class="text-gray-600">Se calcula automáticamente según el proceso</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Merma (gr) - Calculada</label>
+                            <input type="text" id="merma" class="form-input readonly" readonly>
+                            <small class="text-gray-600">Se calcula automáticamente: Peso Entregado - Peso Recibido</small>
+                        </div>
+
+                        <!-- Observaciones (separadas para Entrega/Recibido) -->
+                        <div class="col-span-1 md:col-span-2">
+                            <h3 class="text-lg font-semibold mb-2 text-gray-700">Observaciones</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="form-group">
+                                    <label for="obs_entrega" class="form-label">Observaciones Entrega</label>
+                                    <textarea id="obs_entrega" name="obs_entrega" rows="3" class="form-input" placeholder="Comentarios de la entrega"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label for="obs_recibido" class="form-label">Observaciones Recibido</label>
+                                    <textarea id="obs_recibido" name="obs_recibido" rows="3" class="form-input" placeholder="Comentarios del recibido"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Fotos Entrega -->
+                        <div class="col-span-1 md:col-span-2">
+                            <h3 class="text-lg font-semibold mb-2 text-gray-700">FOTOS (Entrega)</h3>
+                            <div class="flex items-center gap-2 mb-2">
+                                <button type="button" id="btn-camera-entrega" class="camera-icon" title="Tomar foto(s) (Entrega)"></button>
+                                <button type="button" id="btn-upload-entrega" class="upload-icon" title="Subir archivo(s) (Entrega)"></button>
+                                <span id="file-count-entrega" class="text-sm text-gray-500">0 fotos seleccionadas</span>
+                            </div>
+                            <input type="file" id="foto_entrega" name="foto_entrega[]" accept="image/*" class="hidden" multiple>
+                            <div id="preview-container-entrega" class="mt-2 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2"></div>
+                        </div>
+
+                        <!-- Fotos Recibido -->
+                        <div class="col-span-1 md:col-span-2">
+                            <h3 class="text-lg font-semibold mb-2 text-gray-700">FOTOS (Recibido)</h3>
+                            <div class="flex items-center gap-2 mb-2">
+                                <button type="button" id="btn-camera-recibido" class="camera-icon" title="Tomar foto(s) (Recibido)"></button>
+                                <button type="button" id="btn-upload-recibido" class="upload-icon" title="Subir archivo(s) (Recibido)"></button>
+                                <span id="file-count-recibido" class="text-sm text-gray-500">0 fotos seleccionadas</span>
+                            </div>
+                            <input type="file" id="foto_recibido" name="foto_recibido[]" accept="image/*" class="hidden" multiple>
+                            <div id="preview-container-recibido" class="mt-2 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2"></div>
+                        </div>
+
+                    </div>
+
+                    <div class="flex gap-4 mt-8">
+                        <button type="submit" id="save-btn" class="btn-primary">
+                            Guardar Cambios
+                        </button>
+                        <a href="<?php echo $base_url; ?>trazabilidad_list" class="btn-secondary">
+                            Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <footer class="p-4 text-center text-gray-500 text-sm">
+        Sistema de Trazabilidad &copy; <?php echo date('Y'); ?> - 
+        by <a href="mailto:ganoderico@gmail.com" class="inline-flex items-center gap-0.5" title="Escribir a vibo" aria-label="Escribir a vibo">
+            <span style="color:#FACC15; font-weight:700">v</span>
+            <span style="color:#3B82F6; font-weight:700">i</span>
+            <span style="color:#EF4444; font-weight:700">b</span>
+            <span style="color:#22C55E; font-weight:700">o</span>
+        </a>
+    </footer>
+
+    <script src="<?php echo $base_url; ?>frontend/assets/js/scripts.js"></script>
+    <script>
+        // Elementos del DOM
+        const loadingMessage = document.getElementById('loading-message');
+        const errorMessage = document.getElementById('error-message');
+        const errorText = document.getElementById('error-text');
+        const editFormContainer = document.getElementById('edit-form-container');
+        const editForm = document.getElementById('edit-form');
+        const saveBtn = document.getElementById('save-btn');
+        
+        // Campos del formulario
+        const consecutivoDisplay = document.getElementById('consecutivo-display');
+        const consecutivoHidden = document.getElementById('consecutivo-hidden');
+        const fechaEntrega = document.getElementById('fecha-entrega');
+        const fechaRecibido = document.getElementById('fecha-recibido');
+        const estado = document.getElementById('estado');
+        const procesoSelect = document.getElementById('proceso_id');
+        const responsableSelect = document.getElementById('responsable_id');
+        const productoSelect = document.getElementById('producto_id');
+        const pesoEntregado = document.getElementById('peso_entregado');
+        const pesoRecibido = document.getElementById('peso_recibido');
+        const pesoLey = document.getElementById('peso_ley');
+        const merma = document.getElementById('merma');
+    const obsEntrega = document.getElementById('obs_entrega');
+    const obsRecibido = document.getElementById('obs_recibido');
+
+    // Fotos - elementos
+    const btnCameraEntrega = document.getElementById('btn-camera-entrega');
+    const btnUploadEntrega = document.getElementById('btn-upload-entrega');
+    const inputFotoEntrega = document.getElementById('foto_entrega');
+    const previewEntrega = document.getElementById('preview-container-entrega');
+    const countEntrega = document.getElementById('file-count-entrega');
+
+    const btnCameraRecibido = document.getElementById('btn-camera-recibido');
+    const btnUploadRecibido = document.getElementById('btn-upload-recibido');
+    const inputFotoRecibido = document.getElementById('foto_recibido');
+    const previewRecibido = document.getElementById('preview-container-recibido');
+    const countRecibido = document.getElementById('file-count-recibido');
+
+        // Variables globales
+    let recordId = null;
+    let originalData = null;
+    let existingFotosEntrega = [];
+    let existingFotosRecibido = [];
+    let newFotosEntrega = [];
+    let newFotosRecibido = [];
+
+        // Función para mostrar errores
+        function showError(message) {
+            errorText.textContent = message;
+            errorMessage.style.display = 'block';
+            loadingMessage.style.display = 'none';
+            editFormContainer.style.display = 'none';
+        }
+
+        // Función para mostrar el formulario
+        function showForm() {
+            loadingMessage.style.display = 'none';
+            errorMessage.style.display = 'none';
+            editFormContainer.style.display = 'block';
+        }
+
+        // Función para cargar dropdowns
+        async function loadDropdown(endpoint, selectElement, selectedValue = null) {
+            try {
+                const result = await callApi(endpoint, 'GET');
+                selectElement.innerHTML = `<option value="">Seleccionar...</option>`;
+                
+                if (result.success && result.data) {
+                    result.data.forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item.id;
+                        option.textContent = item.nombre;
+                        if (selectedValue && item.id == selectedValue) {
+                            option.selected = true;
+                        }
+                        selectElement.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error(`Error cargando ${endpoint}:`, error);
+                selectElement.innerHTML = `<option value="">Error cargando datos</option>`;
+            }
+        }
+
+        // Función para formatear fecha
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            try {
+                const date = new Date(dateString.replace(' ', 'T'));
+                return date.toLocaleDateString('es-CO', {
+                    year: 'numeric', month: 'short', day: '2-digit',
+                    hour: '2-digit', minute: '2-digit'
+                });
+            } catch (e) {
+                return dateString;
+            }
+        }
+
+        // Función para calcular peso ley y merma
+        function calculateValues() {
+            const proceso = parseInt(procesoSelect.value) || 0;
+            const entregado = parseFloat(pesoEntregado.value) || 0;
+            const recibido = parseFloat(pesoRecibido.value) || 0;
+
+            // Helper: formatea decimales con coma visible (es-CO)
+            const formatDecimalComma = (val, dec = 2) => {
+                const num = Number(val);
+                if (Number.isNaN(num)) return '';
+                return num.toLocaleString('es-CO', {
+                    minimumFractionDigits: dec,
+                    maximumFractionDigits: dec
+                });
+            };
+
+            // Calcular peso ley según reglas
+            let pesoLeyValue = 0;
+            if (proceso === 1) {
+                pesoLeyValue = entregado * -1;
+            } else if ([2, 3, 4].includes(proceso)) {
+                pesoLeyValue = entregado * 1.39;
+            } else {
+                pesoLeyValue = entregado;
+            }
+
+            // Mostrar con coma como separador decimal
+            pesoLey.value = formatDecimalComma(pesoLeyValue, 2);
+
+            // Calcular merma si hay peso recibido
+            if (pesoRecibido.value && !isNaN(recibido)) {
+                merma.value = formatDecimalComma((entregado - recibido), 2);
+            } else {
+                merma.value = '0,00';
+            }
+        }
+
+        // Event listeners para cálculos automáticos
+        procesoSelect.addEventListener('change', calculateValues);
+        pesoEntregado.addEventListener('input', calculateValues);
+        pesoRecibido.addEventListener('input', calculateValues);
+
+        // Helpers fotos
+        function buildImageUrl(path) {
+            const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
+            if (!path) return '';
+            if (/^https?:\/\//i.test(path)) return path;
+            return base.replace(/\/$/, '') + '/' + path.replace(/^\//, '');
+        }
+
+        function renderPhotos(container, countEl, existingList, newList) {
+            container.innerHTML = '';
+
+            // Render existentes
+            existingList.forEach((p, idx) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'relative';
+                const img = document.createElement('img');
+                img.src = buildImageUrl(p);
+                img.className = 'w-full h-24 object-cover rounded-lg shadow-md';
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.innerHTML = '&times;';
+                removeBtn.className = 'absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold';
+                removeBtn.title = 'Quitar foto';
+                removeBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    existingList.splice(idx, 1);
+                    renderPhotos(container, countEl, existingList, newList);
+                };
+                wrapper.appendChild(img);
+                wrapper.appendChild(removeBtn);
+                container.appendChild(wrapper);
+            });
+
+            // Render nuevas
+            newList.forEach((file, idx) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'relative';
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.className = 'w-full h-24 object-cover rounded-lg shadow-md';
+                img.onload = () => URL.revokeObjectURL(img.src);
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.innerHTML = '&times;';
+                removeBtn.className = 'absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold';
+                removeBtn.title = 'Quitar foto';
+                removeBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    newList.splice(idx, 1);
+                    renderPhotos(container, countEl, existingList, newList);
+                };
+                wrapper.appendChild(img);
+                wrapper.appendChild(removeBtn);
+                container.appendChild(wrapper);
+            });
+
+            const total = existingList.length + newList.length;
+            countEl.textContent = `${total} foto(s) seleccionada(s)`;
+        }
+
+        function setupPhotoButtons(cameraBtn, uploadBtn, fileInput, container, countEl, newList) {
+            cameraBtn.addEventListener('click', () => {
+                fileInput.setAttribute('capture', 'environment');
+                fileInput.click();
+            });
+            uploadBtn.addEventListener('click', () => {
+                fileInput.removeAttribute('capture');
+                fileInput.click();
+            });
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files && fileInput.files.length > 0) {
+                    Array.from(fileInput.files).forEach(f => newList.push(f));
+                    renderPhotos(container, countEl, (container===previewEntrega?existingFotosEntrega:existingFotosRecibido), newList);
+                }
+                fileInput.value = '';
+            });
+        }
+
+        // Función para cargar datos del registro
+        async function loadRecordData() {
+            try {
+                const result = await callApi(`trazabilidad/edit/${recordId}`, 'GET');
+                
+                if (!result.success) {
+                    showError(result.message || 'No se pudo cargar el registro');
+                    return;
+                }
+
+                const data = result.data;
+                originalData = data;
+
+                // Llenar campos de solo lectura
+                consecutivoDisplay.textContent = String(data.consecutivo).padStart(4, '0');
+                consecutivoHidden.value = data.consecutivo;
+                fechaEntrega.value = formatDate(data.fecha_entrega);
+                fechaRecibido.value = formatDate(data.fecha_recibido);
+                
+                // Determinar estado
+                const procesoId = parseInt(data.proceso_id || 0);
+                const esAutoCompletado = [1, 2, 3, 4].includes(procesoId);
+                const isCompleted = data.fecha_recibido !== null || esAutoCompletado;
+                estado.value = isCompleted ? 'COMPLETADO' : 'PENDIENTE';
+
+                // Cargar dropdowns con valores seleccionados
+                await Promise.all([
+                    loadDropdown('procesos', procesoSelect, data.proceso_id),
+                    loadDropdown('responsables', responsableSelect, data.responsable_id),
+                    loadDropdown('productos', productoSelect, data.producto_id)
+                ]);
+
+                // Llenar campos editables
+                pesoEntregado.value = parseFloat(data.peso_entregado_gr || 0).toFixed(2);
+                pesoRecibido.value = data.peso_recibido_gr ? parseFloat(data.peso_recibido_gr).toFixed(2) : '';
+                obsEntrega.value = (data.obs_entrega_pura || '').trim();
+                obsRecibido.value = (data.obs_recibido_pura || '').trim();
+
+                // Cargar fotos existentes
+                try {
+                    existingFotosEntrega = Array.isArray(data.foto_entrega_path) ? data.foto_entrega_path : JSON.parse(data.foto_entrega_path || '[]');
+                } catch (e) { existingFotosEntrega = []; }
+                try {
+                    existingFotosRecibido = Array.isArray(data.foto_recibido_path) ? data.foto_recibido_path : JSON.parse(data.foto_recibido_path || '[]');
+                } catch (e) { existingFotosRecibido = []; }
+                renderPhotos(previewEntrega, countEntrega, existingFotosEntrega, newFotosEntrega);
+                renderPhotos(previewRecibido, countRecibido, existingFotosRecibido, newFotosRecibido);
+                
+                // Calcular valores iniciales
+                calculateValues();
+
+                showForm();
+
+            } catch (error) {
+                console.error('Error cargando registro:', error);
+                showError('Error de conexión al cargar el registro');
+            }
+        }
+
+        // Manejar envío del formulario
+        editForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            // Validaciones básicas
+            if (!procesoSelect.value || !responsableSelect.value || !productoSelect.value || !pesoEntregado.value) {
+                showMessageModal('Validación', 'Todos los campos marcados con * son obligatorios.', 'error');
+                return;
+            }
+
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Guardando...';
+
+            // Armar FormData para endpoint /api/trazabilidad/update (POST)
+            const fd = new FormData();
+            fd.append('consecutivo', String(recordId));
+            fd.append('proceso_id', procesoSelect.value);
+            fd.append('responsable_id', responsableSelect.value);
+            fd.append('producto_id', productoSelect.value);
+            fd.append('peso_entregado', String(pesoEntregado.value).replace(',', '.'));
+            if (pesoRecibido.value !== '') {
+                fd.append('peso_recibido', String(pesoRecibido.value).replace(',', '.'));
+            } else {
+                fd.append('peso_recibido', '');
+            }
+            fd.append('obs_entrega', obsEntrega.value || '');
+            fd.append('obs_recibido', obsRecibido.value || '');
+
+            // Fechas desde datos originales para no perderlas
+            fd.append('fecha_entrega', originalData && originalData.fecha_entrega ? originalData.fecha_entrega : '');
+            fd.append('fecha_recibido', originalData && originalData.fecha_recibido ? originalData.fecha_recibido : '');
+
+            // Fotos existentes (las que NO se eliminaron)
+            fd.append('existing_fotos_entrega', JSON.stringify(existingFotosEntrega));
+            fd.append('existing_fotos_recibido', JSON.stringify(existingFotosRecibido));
+
+            // Nuevas fotos
+            newFotosEntrega.forEach(f => fd.append('foto_entrega[]', f, f.name));
+            newFotosRecibido.forEach(f => fd.append('foto_recibido[]', f, f.name));
+
+            try {
+                const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
+                const apiUrl = base.replace(/\/$/, '') + '/api/trazabilidad/update';
+                const resp = await fetch(apiUrl, { method: 'POST', body: fd });
+                const result = await resp.json();
+                if (result.success) {
+                    showMessageModal('Éxito', 'Registro actualizado correctamente.', 'success');
+                    setTimeout(() => {
+                        window.location.href = base.replace(/\/$/, '') + '/trazabilidad_list';
+                    }, 1500);
+                } else {
+                    showMessageModal('Error', result.message || 'Error al actualizar el registro.', 'error');
+                }
+            } catch (err) {
+                console.error('Error actualizando registro:', err);
+                showMessageModal('Error', 'Error de conexión al actualizar el registro.', 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Guardar Cambios';
+            }
+        });
+
+        // Logout
+        document.getElementById('logout-btn').addEventListener('click', async function (e) {
+            e.preventDefault();
+            const result = await callApi('logout', 'GET');
+            if (result.success) {
+                const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
+                window.location.href = base;
+            }
+        });
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', () => {
+            // Obtener ID del registro desde la URL
+            const urlParams = new URLSearchParams(window.location.search);
+            recordId = urlParams.get('id');
+            
+            if (!recordId) {
+                showError('ID del registro no especificado en la URL');
+                return;
+            }
+
+            // Setup botones de fotos
+            setupPhotoButtons(btnCameraEntrega, btnUploadEntrega, inputFotoEntrega, previewEntrega, countEntrega, newFotosEntrega);
+            setupPhotoButtons(btnCameraRecibido, btnUploadRecibido, inputFotoRecibido, previewRecibido, countRecibido, newFotosRecibido);
+
+            // Cargar datos del registro
+            loadRecordData();
+        });
+    </script>
+</body>
+</html>

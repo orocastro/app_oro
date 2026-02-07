@@ -1,0 +1,1033 @@
+<?php
+// PHP include file. Requiere que $base_url esté definido en index.php
+require_once __DIR__ . '/../backend/controllers/AuthController.php'; 
+// Protección de ruta: Si no está logueado, redirigir al login
+if (!SessionManager::get('logged_in')) {
+    header('Location: ' . $base_url);
+    exit();
+}
+$page_title = "Registro de Trazabilidad | Trazabilidad";
+?>
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+        <?php echo $page_title; ?>
+    </title>
+    <!-- Incluimos los estilos base -->
+    <link rel="stylesheet" href="<?php echo $base_url; ?>frontend/assets/css/styles.css">
+    <style>
+        /* Estilos específicos para la plantilla de formulario */
+        .form-trazabilidad {
+            max-width: 800px;
+        }
+
+        /* Cuando el bloque de fecha está oculto, evitamos el hueco inicial de space-y */
+        .left-col-adjust {
+            margin-top: -4px;
+        }
+
+        .form-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            /* permitir salto de línea en móviles */
+            gap: .75rem 1rem;
+            /* espacio entre grupos */
+        }
+
+        .radio-label {
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+            color: #374151;
+            /* gray-700 */
+            cursor: pointer;
+            margin-right: 2rem;
+        }
+
+        .radio-custom {
+            width: 1.25rem;
+            height: 1.25rem;
+            border: 2px solid #00796B;
+            /* teal-600 */
+            border-radius: 0.25rem;
+            margin-right: 0.5rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        input[type="radio"]:checked+.radio-custom {
+            background-color: #00796B;
+        }
+
+        input[type="radio"] {
+            display: none;
+        }
+
+        .consecutivo-box {
+            border: 2px solid #ccc;
+            padding: 0.5rem 1rem;
+            background-color: #f3f4f6;
+            font-weight: bold;
+            font-size: 1.5rem;
+            border-radius: 0.5rem;
+            width: auto;
+            /* ancho flexible */
+            min-width: 110px;
+            /* tamaño mínimo razonable */
+            max-width: 100%;
+            /* nunca exceder el contenedor */
+            text-align: center;
+        }
+
+        /* Ajustes específicos para pantallas pequeñas */
+        @media (max-width: 640px) {
+            .form-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .radio-label {
+                margin-right: 1rem;
+            }
+
+            /* Asegurar que el bloque del consecutivo use el ancho disponible */
+            .form-header>.text-lg {
+                width: 100%;
+            }
+
+            .consecutivo-box {
+                font-size: 1.25rem;
+            }
+        }
+
+        .upload-icon {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234A5568"><path d="M4 4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-8l-2-2H4z"/></svg>');
+            background-size: cover;
+            cursor: pointer;
+            border: none;
+            padding: 0;
+            background-color: transparent;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+
+        /* Icono de cámara simulado */
+        .camera-icon {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2310B981"><path d="M4 4h4l2-2h4l2 2h4a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zm8 4a4 4 0 100 8 4 4 0 000-8zm-2 4a2 2 0 114 0 2 2 0 01-4 0z"/></svg>');
+            background-size: cover;
+            cursor: pointer;
+            border: none;
+            /* para usarlo como botón */
+            padding: 0;
+            /* eliminar padding default del botón */
+            background-color: transparent;
+            /* sin fondo extra */
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-200 flex flex-col min-h-screen">
+
+    <!-- Navbar/Header -->
+    <header
+        class="fixed top-0 left-0 right-0 p-4 shadow-md text-white z-10 flex justify-between items-center flex-wrap gap-2">
+        <h1 class="text-xl font-bold accent-underline">Registro de Trazabilidad</h1>
+        <nav class="flex flex-wrap gap-3 text-sm items-center">
+            <span class="hidden sm:inline">Hola,
+                <?php echo htmlspecialchars(SessionManager::get('user_nombre') ?? 'Usuario'); ?>
+            </span>
+            <a href="<?php echo $base_url; ?>home" class="hover:opacity-90" title="Inicio" aria-label="Inicio"><span
+                    class="icon icon-lg icon-gold" aria-hidden="true"><svg viewBox="0 0 24 24" width="1em" height="1em"
+                        fill="currentColor">
+                        <path d="M12 3l10 9h-3v9h-5v-6H10v6H5v-9H2l10-9z" />
+                    </svg></span></a>
+            <a href="#" id="logout-btn" class="hover:opacity-90" title="Cerrar sesión" aria-label="Cerrar sesión"><span
+                    aria-hidden="true" class="icon icon-lg icon-gold">⭕</span></a>
+        </nav>
+    </header>
+
+    <!-- Contenedor Principal de la Aplicación -->
+    <main id="app-content" class="container mx-auto p-4 mt-20 flex-grow form-trazabilidad">
+
+        <div class="bg-white p-6 rounded-lg shadow-xl form-card">
+
+            <form id="trazabilidad-form" enctype="multipart/form-data">
+
+                <!-- HEADER DE RADIO BUTTONS Y CONSECUTIVO -->
+                <div class="form-header">
+                    <!-- Radio Buttons -->
+                    <div class="flex">
+                        <label class="radio-label">
+                            <input type="radio" name="tipo_movimiento" value="entrega" checked>
+                            <span class="radio-custom" id="radio-entrega">
+                                <svg class="w-full h-full text-white hidden" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M0 11l2-2 5 5L18 3l2 2L7 18z" />
+                                </svg>
+                            </span>
+                            ENTREGA
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="tipo_movimiento" value="recibido">
+                            <span class="radio-custom" id="radio-recibido">
+                                <svg class="w-full h-full text-white hidden" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M0 11l2-2 5 5L18 3l2 2L7 18z" />
+                                </svg>
+                            </span>
+                            RECIBIDO
+                        </label>
+                    </div>
+
+                    <!-- Consecutivo -->
+                    <div class="text-lg font-bold">
+                        CONSECUTIVO: <span id="consecutivo-display" class="consecutivo-box">0001</span>
+                        <input type="hidden" id="consecutivo-input" name="consecutivo">
+                        <!-- Campo oculto para guardar el ID de registro cuando estamos en modo Recibido -->
+                        <input type="hidden" id="registro-id-recibido" name="registro_id">
+                    </div>
+                </div>
+
+                <!-- Buscar Consecutivo (reubicado debajo de CONSECUTIVO) -->
+                <div id="buscar-consecutivo-container" class="hidden mt-3 mb-4">
+                    <label for="buscar_consecutivo" class="block text-gray-700 font-medium mb-2">Buscar Consecutivo:</label>
+                    <div class="flex space-x-2">
+                        <input type="number" id="buscar_consecutivo" class="w-full" placeholder="Ej: 0001" min="1" required>
+                        <button type="button" id="btn-buscar-consecutivo" class="btn-primary flex-shrink-0 px-4 py-2 text-sm">Buscar</button>
+                    </div>
+                    <p id="trazabilidad-info" class="text-sm mt-1 text-red-500 hidden">Consecutivo no encontrado o ya recibido.</p>
+                </div>
+
+                <!-- GRUPO DE CAMPOS DINÁMICOS -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+
+                    <!-- Columna Izquierda (Común a ambos, excepto el label de peso) -->
+                    <div class="space-y-4 left-col-adjust">
+                        <!-- FECHA DE ENTREGA / FECHA DE RECIBIDO -->
+                        <div id="fecha-container" hidden>
+                            <label for="fecha_movimiento" class="block text-gray-700 font-medium mb-2"
+                                id="fecha-label">FECHA DE ENTREGA:</label>
+                            <!-- El valor lo estableceremos con JS y será read-only -->
+                            <input type="text" id="fecha_movimiento" name="fecha_movimiento"
+                                class="w-full bg-gray-100 cursor-default" readonly>
+                            <input type="hidden" id="fecha_movimiento_hidden" name="fecha_movimiento_hidden">
+                        </div>
+
+                        <!-- PROCESO -->
+                        <div>
+                            <label for="proceso_id" class="block text-gray-700 font-medium mb-2">PROCESO:</label>
+                            <!-- En modo Recibido, este select se convierte en input readonly -->
+                            <select id="proceso_id" name="proceso_id" class="w-full" required disabled>
+                                <option value="">Cargando procesos...</option>
+                            </select>
+                            <input type="text" id="proceso_nombre_recibido"
+                                class="w-full hidden bg-gray-100 cursor-default" readonly>
+                        </div>
+
+                        <!-- PESO ENTREGADO / PESO RECIBIDO -->
+                        <div>
+                            <label for="peso_gr" class="block text-gray-700 font-medium mb-2" id="peso-label">PESO
+                                ENTREGADO Gr:</label>
+                            <input type="text" inputmode="decimal" id="peso_gr" name="peso_gr" class="w-full" required
+                                placeholder="Ej: 123.45">
+                        </div>
+
+                        
+
+                        <!-- Campo PESO ENTREGADO ORIGINAL (Para cálculo de merma en Recibido) -->
+                        <input type="hidden" id="peso_entregado_original" name="peso_entregado_original">
+                    </div>
+
+                    <!-- Columna Derecha -->
+                    <div class="space-y-4">
+                        <!-- RESPONSABLE -->
+                        <div>
+                            <label for="responsable_id"
+                                class="block text-gray-700 font-medium mb-2">RESPONSABLE:</label>
+                            <!-- En modo Recibido, este select se convierte en input readonly -->
+                            <select id="responsable_id" name="responsable_id" class="w-full" required disabled>
+                                <option value="">Cargando responsables...</option>
+                            </select>
+                            <input type="text" id="responsable_nombre_recibido"
+                                class="w-full hidden bg-gray-100 cursor-default" readonly>
+                        </div>
+
+                        <!-- PRODUCTO -->
+                        <div>
+                            <label for="producto_id" class="block text-gray-700 font-medium mb-2">PRODUCTO:</label>
+                            <!-- En modo Recibido, este select se convierte en input readonly -->
+                            <select id="producto_id" name="producto_id" class="w-full" required disabled>
+                                <option value="">Cargando productos...</option>
+                            </select>
+                            <input type="text" id="producto_nombre_recibido"
+                                class="w-full hidden bg-gray-100 cursor-default" readonly>
+                        </div>
+
+                        <!-- MERMA (Oculta) -->
+                        <div id="merma-container" class="hidden">
+                            <label for="merma_gr" class="block text-gray-700 font-medium mb-2">MERMA Gr:</label>
+                            <!-- Calculado automáticamente -->
+                            <input type="text" id="merma_gr" name="merma_gr" class="w-full bg-gray-100 cursor-default"
+                                readonly value="0.00">
+                            <!-- Guardar el proceso de la entrega para aplicar reglas de merma en UI -->
+                            <input type="hidden" id="proceso_id_recibido_hidden" name="proceso_id_recibido_hidden" />
+                        </div>
+
+                        <!-- Información de Entrega para Recibido -->
+                        <div id="entrega-data-recibido"
+                            class="hidden p-3 bg-gray-100 rounded-lg text-sm text-gray-600 border border-gray-300">
+                            <p class="font-bold text-gray-800 mb-1">Datos de Entrega:</p>
+                            <p><strong>Peso Entregado:</strong> <span id="display-peso-entregado"></span> Gr</p>
+                            <p><strong>Fecha Entrega:</strong> <span id="display-fecha-entrega"></span></p>
+                            <p><strong>Observaciones:</strong> <span id="display-observaciones-entrega"></span></p>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- OBSERVACIONES (Ancho Completo) -->
+                <div class="mt-4">
+                    <label for="observaciones" class="block text-gray-700 font-medium mb-2">OBSERVACIONES:</label>
+                    <textarea id="observaciones" name="observaciones" rows="3" class="w-full"></textarea>
+                </div>
+
+                <!-- FOTOS (Entrega) - reubicado al final antes del botón de registro -->
+                <div id="foto-entrega-container" class="mt-4">
+                    <label class="block text-gray-700 font-medium mb-2">FOTOS (Entrega):</label>
+                    <div class="flex items-center gap-2">
+                        <button type="button" id="btn-camera-entrega" class="camera-icon"
+                            title="Tomar foto(s) (Entrega)"></button>
+                        <button type="button" id="btn-upload-entrega" class="upload-icon"
+                            title="Subir archivo(s) (Entrega)"></button>
+                        <span id="file-count-entrega" class="text-sm text-gray-500">0 fotos seleccionadas</span>
+                    </div>
+                    <input type="file" id="foto_entrega" name="foto_entrega[]" accept="image/*" class="hidden"
+                        multiple>
+                    <div id="preview-container-entrega"
+                        class="mt-2 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2"></div>
+                </div>
+
+                <!-- FOTOS (Recibido) - reubicado al final antes del botón de registro -->
+                <div id="foto-recibido-container" class="hidden mt-4">
+                    <label class="block text-gray-700 font-medium mb-2">FOTOS (Recibido):</label>
+                    <div class="flex items-center gap-2">
+                        <button type="button" id="btn-camera-recibido" class="camera-icon"
+                            title="Tomar foto(s) (Recibido)"></button>
+                        <button type="button" id="btn-upload-recibido" class="upload-icon"
+                            title="Subir archivo(s) (Recibido)"></button>
+                        <span id="file-count-recibido" class="text-sm text-gray-500">0 fotos seleccionadas</span>
+                    </div>
+                    <input type="file" id="foto_recibido" name="foto_recibido[]" accept="image/*" class="hidden"
+                        multiple>
+                    <div id="preview-container-recibido"
+                        class="mt-2 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2"></div>
+                </div>
+
+                <!-- Botón de Registro -->
+                <div class="flex justify-end mt-6">
+                    <button type="submit" class="btn-primary text-lg" id="submit-button" disabled>
+                        REGISTRAR ENTREGA
+                    </button>
+                </div>
+            </form>
+        </div>
+
+    </main>
+
+    <footer class="p-4 text-center text-gray-500 text-sm">
+        Sistema de Trazabilidad &copy;
+        <?php echo date('Y'); ?> -
+        by <a href="mailto:ganoderico@gmail.com" class="inline-flex items-center gap-0.5" title="Escribir a vibo"
+            aria-label="Escribir a vibo">
+            <span style="color:#FACC15; font-weight:700">v</span>
+            <span style="color:#3B82F6; font-weight:700">i</span>
+            <span style="color:#EF4444; font-weight:700">b</span>
+            <span style="color:#22C55E; font-weight:700">o</span>
+        </a>
+    </footer>
+
+    <!-- Incluimos el script principal -->
+    <script src="<?php echo $base_url; ?>frontend/assets/js/scripts.js"></script>
+    <script>
+        // --- VARIABLES GLOBALES ---
+        const API_PROCESOS = 'procesos';
+        const API_RESPONSABLES = 'responsables';
+        const API_PRODUCTOS = 'productos';
+        const API_TRAZABILIDAD = 'trazabilidad';
+
+        // Elementos de Formulario
+        const form = document.getElementById('trazabilidad-form');
+        const radioEntrega = document.querySelector('input[name="tipo_movimiento"][value="entrega"]');
+        const radioRecibido = document.querySelector('input[name="tipo_movimiento"][value="recibido"]');
+        const radioEntregaCustom = document.getElementById('radio-entrega');
+        const radioRecibidoCustom = document.getElementById('radio-recibido');
+
+        const consecutivoDisplay = document.getElementById('consecutivo-display');
+        const consecutivoInput = document.getElementById('consecutivo-input');
+        const registroIdRecibidoInput = document.getElementById('registro-id-recibido');
+
+        const fechaLabel = document.getElementById('fecha-label');
+        const fechaInput = document.getElementById('fecha_movimiento');
+        const fechaHiddenInput = document.getElementById('fecha_movimiento_hidden');
+
+        const pesoLabel = document.getElementById('peso-label');
+        const pesoGrInput = document.getElementById('peso_gr');
+        // Pista bajo el campo de PESO para informar bloqueo automático
+        let pesoHintEl = document.getElementById('peso-hint');
+        if (!pesoHintEl) {
+            pesoHintEl = document.createElement('div');
+            pesoHintEl.id = 'peso-hint';
+            pesoHintEl.className = 'text-xs text-gray-500 mt-1';
+            pesoHintEl.style.display = 'none';
+            const pesoParent = pesoGrInput.parentElement;
+            if (pesoParent) pesoParent.appendChild(pesoHintEl);
+        }
+        const fotoEntregaContainer = document.getElementById('foto-entrega-container');
+        const fotoRecibidoContainer = document.getElementById('foto-recibido-container');
+        const btnUploadEntrega = document.getElementById('btn-upload-entrega');
+        const btnUploadRecibido = document.getElementById('btn-upload-recibido');
+        const inputFotoEntrega = document.getElementById('foto_entrega');
+        const inputFotoRecibido = document.getElementById('foto_recibido');
+        const previewContainerEntrega = document.getElementById('preview-container-entrega');
+        const previewContainerRecibido = document.getElementById('preview-container-recibido');
+        const fileCountEntrega = document.getElementById('file-count-entrega');
+        const fileCountRecibido = document.getElementById('file-count-recibido');
+
+        const procesoSelect = document.getElementById('proceso_id');
+        const responsableSelect = document.getElementById('responsable_id');
+        const productoSelect = document.getElementById('producto_id');
+        const procesoNombreRecibido = document.getElementById('proceso_nombre_recibido');
+        const responsableNombreRecibido = document.getElementById('responsable_nombre_recibido');
+        const productoNombreRecibido = document.getElementById('producto_nombre_recibido');
+
+        const mermaContainer = document.getElementById('merma-container');
+        const mermaGrInput = document.getElementById('merma_gr');
+        const procesoIdRecibidoHidden = document.getElementById('proceso_id_recibido_hidden');
+        const buscarConsecutivoContainer = document.getElementById('buscar-consecutivo-container');
+        const buscarConsecutivoInput = document.getElementById('buscar_consecutivo');
+        const btnBuscarConsecutivo = document.getElementById('btn-buscar-consecutivo');
+        const trazabilidadInfo = document.getElementById('trazabilidad-info');
+        const submitButton = document.getElementById('submit-button');
+        const pesoEntregadoOriginalInput = document.getElementById('peso_entregado_original');
+
+        const entregaDataRecibido = document.getElementById('entrega-data-recibido');
+        const displayPesoEntregado = document.getElementById('display-peso-entregado');
+        const displayFechaEntrega = document.getElementById('display-fecha-entrega');
+        const displayObservacionesEntrega = document.getElementById('display-observaciones-entrega');
+
+        const camposCatalogoEntrega = [procesoSelect, responsableSelect, productoSelect];
+        const camposCatalogoRecibido = [procesoNombreRecibido, responsableNombreRecibido, productoNombreRecibido];
+
+        let fileStoreEntrega = [];
+        let fileStoreRecibido = [];
+        // Materiales: catálogos y estados por modo
+        let materialesCatalog = [];
+        let matWeightsEntrega = {}; // {materialId: peso}
+        let matWeightsRecibido = {}; // {materialId: peso}
+        let matFilesEntrega = {};   // {materialId: File[]}
+        let matFilesRecibido = {};  // {materialId: File[]}
+
+        // --- FUNCIONES DE UTILIDAD ---
+        async function loadDropdown(endpoint, selectId, placeholder = "Seleccionar...") {
+            const select = document.getElementById(selectId);
+            select.innerHTML = `<option value="">Cargando ${endpoint}...</option>`;
+            const result = await callApi(endpoint, 'GET');
+            select.innerHTML = `<option value="">${placeholder}</option>`;
+            select.disabled = false;
+            if (result.success && result.data) {
+                result.data.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent = item.nombre;
+                    select.appendChild(option);
+                });
+            } else {
+                select.innerHTML = `<option value="">Error al cargar ${endpoint}</option>`;
+                select.disabled = true;
+                showMessageModal('Error de Carga', `No se pudieron cargar los datos de ${endpoint}.`, 'error');
+            }
+        }
+
+        // Cargar materiales
+        async function loadMateriales() {
+            const r = await callApi('materiales', 'GET');
+            if (r.success && Array.isArray(r.data)) {
+                materialesCatalog = r.data;
+            } else {
+                materialesCatalog = [];
+            }
+        }
+
+        function updateAndPreviewImages(input) {
+            const isEntrega = (input.id === 'foto_entrega');
+            const fileStore = isEntrega ? fileStoreEntrega : fileStoreRecibido;
+            const container = isEntrega ? previewContainerEntrega : previewContainerRecibido;
+            const countEl = isEntrega ? fileCountEntrega : fileCountRecibido;
+
+            if (input.files && input.files.length > 0) {
+                Array.from(input.files).forEach(file => fileStore.push(file));
+            }
+
+            container.innerHTML = '';
+            fileStore.forEach((file, index) => {
+                const previewWrapper = document.createElement('div');
+                previewWrapper.className = 'relative';
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.className = 'w-full h-24 object-cover rounded-lg shadow-md';
+                img.onload = () => URL.revokeObjectURL(img.src);
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.innerHTML = '&times;';
+                removeBtn.className = 'absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold';
+                removeBtn.title = 'Quitar foto';
+                removeBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    fileStore.splice(index, 1);
+                    updateAndPreviewImages(input);
+                };
+                previewWrapper.appendChild(img);
+                previewWrapper.appendChild(removeBtn);
+                container.appendChild(previewWrapper);
+            });
+
+            countEl.textContent = `${fileStore.length} foto(s) seleccionada(s)`;
+            input.value = '';
+        }
+
+        function getCurrentDateTime() {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const timeStr = now.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            return {
+                display: `${dateStr} ${timeStr}`,
+                iso: now.getFullYear() + '-' +
+                    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                    String(now.getDate()).padStart(2, '0') + ' ' +
+                    String(now.getHours()).padStart(2, '0') + ':' +
+                    String(now.getMinutes()).padStart(2, '0') + ':' +
+                    String(now.getSeconds()).padStart(2, '0')
+            };
+        }
+
+        async function loadNextConsecutivo() {
+            const result = await callApi(`${API_TRAZABILIDAD}/consecutivo`, 'GET');
+            if (result.success) {
+                consecutivoDisplay.textContent = result.consecutivo_display;
+                consecutivoInput.value = result.consecutivo;
+            } else {
+                consecutivoDisplay.textContent = 'ERROR';
+                consecutivoInput.value = '';
+                showMessageModal('Error', 'No se pudo obtener el siguiente consecutivo.', 'error');
+            }
+        }
+
+        function setFormMode(mode) {
+            const isEntrega = mode === 'entrega';
+            radioEntregaCustom.querySelector('svg').classList.toggle('hidden', !isEntrega);
+            radioRecibidoCustom.querySelector('svg').classList.toggle('hidden', isEntrega);
+            form.reset();
+            radioEntrega.checked = isEntrega;
+            radioRecibido.checked = !isEntrega;
+            trazabilidadInfo.classList.add('hidden');
+            entregaDataRecibido.classList.add('hidden');
+            registroIdRecibidoInput.value = '';
+            pesoEntregadoOriginalInput.value = '';
+            procesoIdRecibidoHidden.value = '';
+
+            if (isEntrega) {
+                loadNextConsecutivo();
+                consecutivoDisplay.classList.add('bg-gray-100', 'cursor-default');
+                submitButton.disabled = false;
+            } else {
+                consecutivoDisplay.textContent = '0000';
+                consecutivoInput.value = '';
+                consecutivoDisplay.classList.remove('bg-gray-100', 'cursor-default');
+                submitButton.disabled = true;
+            }
+
+            fechaLabel.textContent = isEntrega ? 'FECHA DE ENTREGA:' : 'FECHA DE RECIBIDO:';
+            pesoLabel.textContent = isEntrega ? 'PESO ENTREGADO Gr:' : 'PESO RECIBIDO Gr:';
+            submitButton.textContent = isEntrega ? 'REGISTRAR ENTREGA' : 'REGISTRAR RECIBIDO';
+            const now = getCurrentDateTime();
+            fechaInput.value = now.display;
+            fechaHiddenInput.value = now.iso;
+            fotoEntregaContainer.classList.toggle('hidden', !isEntrega);
+            fotoRecibidoContainer.classList.toggle('hidden', isEntrega);
+            mermaContainer.classList.add('hidden');
+            buscarConsecutivoContainer.classList.toggle('hidden', isEntrega);
+            document.getElementById('fecha-container').hidden = !isEntrega;
+
+            // Lógica de campos de catálogo
+            camposCatalogoEntrega.forEach(field => field.classList.toggle('hidden', !isEntrega));
+            camposCatalogoRecibido.forEach(field => field.classList.toggle('hidden', isEntrega));
+            [procesoSelect, responsableSelect, productoSelect].forEach(sel => {
+                sel.disabled = !isEntrega;
+                sel.required = isEntrega;
+            });
+
+            // Lógica de campos de peso y búsqueda
+            pesoGrInput.required = true;
+            document.getElementById('buscar_consecutivo').required = !isEntrega;
+
+            // Limpiar almacenes de archivos y previsualizaciones
+            fileStoreEntrega = [];
+            fileStoreRecibido = [];
+            updateAndPreviewImages(inputFotoEntrega);
+            updateAndPreviewImages(inputFotoRecibido);
+
+            // Reiniciar estructuras de materiales sólo al cambiar de modo
+            renderMaterialesUI(isEntrega ? 'entrega' : 'recibido');
+            // Actualizar bloqueo del peso según materiales actuales
+            updatePesoHintAndReadonly(hasAnyMaterialWeight());
+
+            // Asegurar que el campo de peso esté editable y vacío en modo 'Recibido'
+            if (!isEntrega) {
+                // Se habilita manualmente sólo si no hay materiales
+                pesoGrInput.value = '';
+                updatePesoHintAndReadonly(hasAnyMaterialWeight());
+            } else {
+                updatePesoHintAndReadonly(hasAnyMaterialWeight());
+            }
+        }
+
+        // Construye la UI de materiales según el modo
+        function renderMaterialesUI(modo) {
+            const isEntrega = modo === 'entrega';
+            let container = document.getElementById('materiales-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'materiales-container';
+                container.className = 'mt-4 p-4 border border-gray-300 rounded-lg bg-gray-50';
+                const anchor = document.getElementById('observaciones').parentElement; // antes de observaciones
+                anchor.parentElement.insertBefore(container, anchor);
+            }
+            container.innerHTML = '';
+            const title = document.createElement('h3');
+            title.className = 'text-lg font-semibold mb-3 text-gray-700';
+            title.textContent = isEntrega ? 'Materiales (Entrega)' : 'Materiales (Recibido)';
+            container.appendChild(title);
+
+            if (!materialesCatalog || materialesCatalog.length === 0) {
+                const p = document.createElement('p');
+                p.className = 'text-sm text-gray-500';
+                p.textContent = 'No hay materiales registrados.';
+                container.appendChild(p);
+                return;
+            }
+
+            const grid = document.createElement('div');
+            grid.className = 'grid grid-cols-1 sm:grid-cols-2 gap-4';
+
+            materialesCatalog.forEach(mat => {
+                const matId = mat.id;
+                const card = document.createElement('div');
+                card.className = 'p-3 bg-white rounded border border-gray-200';
+                const label = document.createElement('label');
+                label.className = 'block text-gray-700 font-medium';
+                label.textContent = mat.nombre;
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.inputMode = 'decimal';
+                input.placeholder = 'Peso (gr)';
+                input.className = 'w-full mt-2';
+                input.value = '';
+                input.addEventListener('input', () => {
+                    const val = String(input.value).replace(',', '.');
+                    const num = Number(val);
+                    if (isEntrega) {
+                        matWeightsEntrega[matId] = Number.isFinite(num) ? num : 0;
+                    } else {
+                        matWeightsRecibido[matId] = Number.isFinite(num) ? num : 0;
+                    }
+                    updateTotalesDesdeMateriales();
+                });
+
+                // Botones de fotos por material
+                const rowBtns = document.createElement('div');
+                rowBtns.className = 'flex items-center gap-2 mt-2';
+                const camBtn = document.createElement('button');
+                camBtn.type = 'button';
+                camBtn.className = 'camera-icon';
+                camBtn.title = `Tomar foto (${mat.nombre})`;
+                const upBtn = document.createElement('button');
+                upBtn.type = 'button';
+                upBtn.className = 'upload-icon';
+                upBtn.title = `Subir foto (${mat.nombre})`;
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = 'image/*';
+                fileInput.multiple = true;
+                fileInput.id = `material_file_${matId}`;
+                fileInput.className = 'hidden';
+                const preview = document.createElement('div');
+                preview.id = `preview_mat_${matId}`;
+                preview.className = 'mt-2 grid grid-cols-3 gap-2';
+
+                camBtn.addEventListener('click', () => { fileInput.setAttribute('capture','environment'); fileInput.click(); });
+                upBtn.addEventListener('click', () => { fileInput.removeAttribute('capture'); fileInput.click(); });
+                fileInput.addEventListener('change', () => {
+                    const store = isEntrega ? (matFilesEntrega[matId] ||= []) : (matFilesRecibido[matId] ||= []);
+                    if (fileInput.files && fileInput.files.length > 0) {
+                        Array.from(fileInput.files).forEach(f => store.push(f));
+                    }
+                    renderMaterialPreview(preview, store);
+                    fileInput.value = '';
+                });
+
+                rowBtns.appendChild(camBtn);
+                rowBtns.appendChild(upBtn);
+                rowBtns.appendChild(fileInput);
+
+                card.appendChild(label);
+                card.appendChild(input);
+                card.appendChild(rowBtns);
+                card.appendChild(preview);
+                grid.appendChild(card);
+            });
+
+            container.appendChild(grid);
+        }
+
+        function renderMaterialPreview(container, files) {
+            container.innerHTML = '';
+            files.forEach((file, idx) => {
+                const wrap = document.createElement('div');
+                wrap.className = 'relative';
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.className = 'w-full h-20 object-cover rounded border';
+                img.onload = () => URL.revokeObjectURL(img.src);
+                const rm = document.createElement('button');
+                rm.type = 'button';
+                rm.className = 'absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs';
+                rm.innerHTML = '&times;';
+                rm.onclick = (e) => { e.stopPropagation(); files.splice(idx,1); renderMaterialPreview(container, files); };
+                wrap.appendChild(img); wrap.appendChild(rm); container.appendChild(wrap);
+            });
+        }
+
+        function updateTotalesDesdeMateriales() {
+            const isEntrega = radioEntrega.checked;
+            const weights = isEntrega ? matWeightsEntrega : matWeightsRecibido;
+            let sum = 0;
+            Object.keys(weights).forEach(k => { const v = Number(weights[k]||0); if (Number.isFinite(v)) sum += v; });
+            sum = Math.round(sum*100)/100;
+            pesoGrInput.value = String(sum.toFixed(2));
+            const hasAny = Object.values(weights).some(v => Number(v||0) > 0);
+            if (typeof updatePesoHintAndReadonly === 'function') updatePesoHintAndReadonly(hasAny);
+            if (!isEntrega) {
+                // actualizar merma visible
+                calcularMermaDesdeSumatoria(sum);
+            }
+        }
+
+        function calcularMermaDesdeSumatoria(pesoRecibidoCalc) {
+            // Respetar procesos auto-completados (1,2,3,4) con merma NULL
+            const pId = parseInt(procesoIdRecibidoHidden.value || '0', 10);
+            if ([1, 2, 3, 4].includes(pId)) {
+                mermaGrInput.value = 'NULL';
+                return;
+            }
+            const valEnt = normalizarNumero(pesoEntregadoOriginalInput.value);
+            const rec = Number(pesoRecibidoCalc);
+            if (Number.isFinite(valEnt) && Number.isFinite(rec)) {
+                const merma = valEnt - rec;
+                mermaGrInput.value = formatDecimalComma(merma, 2);
+            } else {
+                mermaGrInput.value = '0,00';
+            }
+        }
+
+        function hasAnyMaterialWeight() {
+            const weights = radioEntrega.checked ? matWeightsEntrega : matWeightsRecibido;
+            return Object.values(weights).some(v => Number(v||0) > 0);
+        }
+
+        function updatePesoHintAndReadonly(hasAny) {
+            if (hasAny) {
+                pesoGrInput.readOnly = true;
+                if (pesoHintEl) {
+                    pesoHintEl.textContent = 'Total calculado automáticamente por materiales.';
+                    pesoHintEl.style.display = '';
+                }
+            } else {
+                pesoGrInput.readOnly = false;
+                if (pesoHintEl) {
+                    pesoHintEl.textContent = '';
+                    pesoHintEl.style.display = 'none';
+                }
+            }
+        }
+
+        async function buscarConsecutivo() {
+            const consecutivo = buscarConsecutivoInput.value.trim();
+            if (!consecutivo) {
+                showMessageModal('Búsqueda', 'Ingrese un número de consecutivo válido.', 'info');
+                return;
+            }
+            btnBuscarConsecutivo.disabled = true;
+            btnBuscarConsecutivo.textContent = 'Buscando...';
+            trazabilidadInfo.classList.add('hidden');
+            entregaDataRecibido.classList.add('hidden');
+            submitButton.disabled = true;
+            registroIdRecibidoInput.value = '';
+            const result = await callApi(`${API_TRAZABILIDAD}/${consecutivo}`, 'GET');
+            btnBuscarConsecutivo.disabled = false;
+            btnBuscarConsecutivo.textContent = 'Buscar';
+            consecutivoDisplay.textContent = consecutivo.padStart(4, '0');
+            consecutivoInput.value = consecutivo;
+            if (result.success) {
+                const data = result.data;
+                entregaDataRecibido.classList.remove('hidden');
+                displayPesoEntregado.textContent = formatDecimalComma(data.peso_entregado_gr, 2);
+                displayFechaEntrega.textContent = data.fecha_entrega ? data.fecha_entrega : 'N/A';
+                let obsEntregaPure = (data.obs_entrega_pura || '').trim();
+                if (!obsEntregaPure) {
+                    const rawObs = (data.observaciones_entrega || '').trim();
+                    if (rawObs) {
+                        const firstEntrega = rawObs.split(/\r?\n/).find(l => !/^\s*RECIBIDO:/i.test(l));
+                        obsEntregaPure = firstEntrega ? firstEntrega.replace(/^\s*ENTREGA:\s*/i, '').trim() : '';
+                    }
+                }
+                const obsRecibido = (data.obs_recibido_pura || '').trim();
+                displayObservacionesEntrega.textContent = `Entrega: ${obsEntregaPure || 'Sin observaciones'}${obsRecibido ? ' | Recibido: ' + obsRecibido : ''}`;
+                document.getElementById('observaciones').value = '';
+                procesoNombreRecibido.value = data.proceso_nombre;
+                responsableNombreRecibido.value = data.responsable_nombre;
+                productoNombreRecibido.value = data.producto_nombre;
+                procesoIdRecibidoHidden.value = data.proceso_id;
+                pesoEntregadoOriginalInput.value = data.peso_entregado_gr;
+                registroIdRecibidoInput.value = data.id;
+                submitButton.disabled = false;
+                // Al cargar datos de recibido, bloquear el peso si hay materiales en uso
+                updatePesoHintAndReadonly(hasAnyMaterialWeight());
+                pesoGrInput.focus();
+                const pId = parseInt(data.proceso_id, 10);
+                mermaGrInput.value = ([1, 2, 3, 4].includes(pId)) ? 'NULL' : '0,00';
+            } else {
+                trazabilidadInfo.textContent = result.message || 'Error desconocido en la búsqueda.';
+                trazabilidadInfo.classList.remove('hidden');
+                procesoNombreRecibido.value = '';
+                responsableNombreRecibido.value = '';
+                productoNombreRecibido.value = '';
+                pesoEntregadoOriginalInput.value = '';
+                mermaGrInput.value = '0,00';
+                procesoIdRecibidoHidden.value = '';
+            }
+        }
+
+        // --- CORRECCIÓN CLAVE ---
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const isEntrega = radioEntrega.checked;
+            const endpoint = isEntrega ? `${API_TRAZABILIDAD}/entrega` : `${API_TRAZABILIDAD}/recibido`;
+            const action = isEntrega ? 'Entrega' : 'Recibido';
+            const fileStore = isEntrega ? fileStoreEntrega : fileStoreRecibido;
+            const fotoInputName = isEntrega ? 'foto_entrega[]' : 'foto_recibido[]';
+
+            if (fileStore.length === 0) {
+                showMessageModal('Error de Validación', 'Debe subir al menos una foto.', 'error');
+                return;
+            }
+
+            if (!isEntrega) {
+                if (!registroIdRecibidoInput.value || !pesoGrInput.value.trim() || !pesoEntregadoOriginalInput.value) {
+                    showMessageModal('Error de Validación', 'Faltan datos para el registro de recibido. Busque el consecutivo nuevamente.', 'error');
+                    return;
+                }
+            }
+
+            submitButton.disabled = true;
+            const originalText = submitButton.textContent;
+            submitButton.textContent = `Registrando ${action}...`;
+
+            // --- Construcción Manual del FormData ---
+            const formData = new FormData();
+
+            // 1. Añadir todos los campos del formulario EXCEPTO los de tipo 'file'
+            const formElements = form.elements;
+            for (let i = 0; i < formElements.length; i++) {
+                const element = formElements[i];
+                if (!element.name || element.type === 'submit' || element.type === 'button' || element.type === 'file' || (element.type === 'radio' && !element.checked)) {
+                    continue;
+                }
+                let valueToAppend = element.value;
+                if ((element.name === 'peso_gr' || element.name === 'merma_gr') && valueToAppend !== 'NULL') {
+                    valueToAppend = String(valueToAppend).replace(',', '.');
+                }
+                formData.append(element.name, valueToAppend);
+            }
+
+            // 2. Añadir los archivos desde el almacén de JavaScript (globales)
+            fileStore.forEach((file) => {
+                formData.append(fotoInputName, file, file.name);
+            });
+
+            // 3. Adjuntar detalle de materiales (pesos y fotos)
+            const modo = isEntrega ? 'entrega' : 'recibido';
+            const weights = isEntrega ? matWeightsEntrega : matWeightsRecibido;
+            const filesMap = isEntrega ? matFilesEntrega : matFilesRecibido;
+            const materialesPayload = [];
+            materialesCatalog.forEach(mat => {
+                const id = mat.id; const peso = Number(weights[id]||0);
+                if (Number.isFinite(peso) && peso > 0) {
+                    materialesPayload.push({ material_id: id, peso: Number(peso.toFixed(2)) });
+                }
+            });
+            if (materialesPayload.length > 0) {
+                formData.append('materiales_json', JSON.stringify(materialesPayload));
+            }
+            Object.keys(filesMap).forEach(id => {
+                const arr = filesMap[id]||[];
+                arr.forEach(f => formData.append(`material_fotos_${id}[]`, f, f.name));
+            });
+            // --- Fin de la Construcción Manual ---
+
+            try {
+                const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
+                const apiUrl = base.replace(/\/$/, '') + `/api/${endpoint}`;
+                const response = await fetch(apiUrl, { method: 'POST', body: formData });
+                const result = await response.json();
+
+                if (result.success) {
+                    if (isEntrega) {
+                        showMessageModal('Éxito', result.message, 'success');
+                        setFormMode('entrega');
+                    } else {
+                        const consec = (consecutivoInput.value || '').toString().padStart(4, '0');
+                        window.location.href = base.replace(/\/$/, '') + '/trazabilidad_list?highlight=' + encodeURIComponent(consec);
+                        return;
+                    }
+                } else {
+                    showMessageModal('Error de Registro', result.message || `Error desconocido al registrar ${action}.`, 'error');
+                }
+            } catch (error) {
+                console.error('Error de red/servidor:', error);
+                showMessageModal('Error de Conexión', `No se pudo conectar al servidor para registrar ${action}.`, 'error');
+            } finally {
+                submitButton.textContent = originalText;
+                if (isEntrega) {
+                    submitButton.disabled = false;
+                }
+            }
+        });
+
+        // --- EVENT LISTENERS ---
+        document.querySelectorAll('input[name="tipo_movimiento"]').forEach(radio => {
+            radio.addEventListener('change', (e) => setFormMode(e.target.value));
+        });
+        btnBuscarConsecutivo.addEventListener('click', buscarConsecutivo);
+        buscarConsecutivoInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                buscarConsecutivo();
+            }
+        });
+
+        function normalizarNumero(valor) {
+            if (typeof valor === 'number') return valor;
+            if (valor === null || valor === undefined) return NaN;
+            const s = String(valor).replace(/\s+/g, '').replace(',', '.');
+            if (s === '') return NaN;
+            const n = Number(s);
+            return Number.isFinite(n) ? n : NaN;
+        }
+
+        // Formatea número con coma como separador decimal (visible)
+        function formatDecimalComma(val, dec = 2) {
+            const num = Number(val);
+            if (!Number.isFinite(num)) return '';
+            return num.toLocaleString('es-CO', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+        }
+
+        function calcularMermaEnVivo() {
+            if (!radioRecibido.checked) return;
+            const pId = parseInt(procesoIdRecibidoHidden.value || '0', 10);
+            if ([1, 2, 3, 4].includes(pId)) {
+                mermaGrInput.value = 'NULL';
+                return;
+            }
+            let pesoRecibido = normalizarNumero(pesoGrInput.value);
+            const pesoOriginal = normalizarNumero(pesoEntregadoOriginalInput.value);
+            if (Number.isFinite(pesoOriginal) && Number.isFinite(pesoRecibido)) {
+                const merma = pesoOriginal - pesoRecibido;
+                mermaGrInput.value = formatDecimalComma(merma, 2);
+            } else {
+                mermaGrInput.value = '0,00';
+            }
+        }
+        pesoGrInput.addEventListener('input', calcularMermaEnVivo);
+
+        function setupPhotoButtons(cameraBtnId, uploadBtnId, fileInputId) {
+            const cameraBtn = document.getElementById(cameraBtnId);
+            const uploadBtn = document.getElementById(uploadBtnId);
+            const fileInput = document.getElementById(fileInputId);
+            cameraBtn.addEventListener('click', () => {
+                fileInput.setAttribute('capture', 'environment');
+                fileInput.click();
+            });
+            uploadBtn.addEventListener('click', () => {
+                fileInput.removeAttribute('capture');
+                fileInput.click();
+            });
+            fileInput.addEventListener('change', () => {
+                updateAndPreviewImages(fileInput);
+            });
+        }
+
+        // --- INICIALIZACIÓN ---
+        window.onload = function () {
+            loadDropdown(API_PROCESOS, 'proceso_id', 'Seleccionar Proceso');
+            loadDropdown(API_RESPONSABLES, 'responsable_id', 'Seleccionar Responsable');
+            loadDropdown(API_PRODUCTOS, 'producto_id', 'Seleccionar Producto');
+            setupPhotoButtons('btn-camera-entrega', 'btn-upload-entrega', 'foto_entrega');
+            setupPhotoButtons('btn-camera-recibido', 'btn-upload-recibido', 'foto_recibido');
+            // Cargar materiales antes de construir la UI
+            loadMateriales().then(() => setFormMode('entrega'));
+            document.getElementById('logout-btn').addEventListener('click', async function (e) {
+                e.preventDefault();
+                const result = await callApi('logout', 'GET');
+                if (result.success) {
+                    const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
+                    window.location.href = base;
+                } else {
+                    showMessageModal('Error', 'No se pudo cerrar sesión.', 'error');
+                }
+            });
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const mode = (params.get('mode') || '').toLowerCase();
+                const consecParam = params.get('consecutivo');
+                if (mode === 'recibido' && consecParam) {
+                    setFormMode('recibido');
+                    const consecClean = String(consecParam).replace(/\D+/g, '');
+                    if (consecClean) {
+                        buscarConsecutivoInput.value = consecClean;
+                        setTimeout(() => buscarConsecutivo(), 100);
+                    }
+                }
+            } catch (e) {
+                console.warn('No se pudieron leer los parámetros de la URL:', e);
+            }
+        };
+    </script>
+</body>
+
+</html>

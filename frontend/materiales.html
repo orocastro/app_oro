@@ -1,0 +1,245 @@
+<?php
+$page_title = "CRUD Materiales | Trazabilidad";
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo $page_title; ?></title>
+    <link rel="stylesheet" href="<?php echo $base_url; ?>frontend/assets/css/styles.css">
+</head>
+<body class="bg-gray-200 flex flex-col min-h-screen">
+    <header class="fixed top-0 left-0 right-0 p-4 shadow-md text-white z-10 flex justify-between items-center flex-wrap gap-2">
+        <h1 class="text-xl font-bold accent-underline">Gestión de Materiales</h1>
+        <nav class="flex flex-wrap gap-3 text-sm items-center">
+            <span class="hidden sm:inline">Hola, <?php echo htmlspecialchars(SessionManager::get('user_nombre') ?? 'Usuario'); ?></span>
+            <a href="<?php echo $base_url; ?>home" class="hover:opacity-90" title="Inicio" aria-label="Inicio"><span class="icon icon-lg icon-gold" aria-hidden="true">🏠</span></a>
+            <a href="#" id="logout-btn" class="hover:opacity-90" title="Cerrar sesión" aria-label="Cerrar sesión"><span aria-hidden="true" class="icon icon-lg icon-gold">⭕</span></a>
+        </nav>
+    </header>
+
+    <main id="app-content" class="container mx-auto p-4 mt-20 flex-grow max-w-4xl">
+        <div class="bg-white p-6 rounded-lg shadow-xl form-card mb-8">
+            <h2 class="text-xl font-semibold mb-4 text-gray-700" id="form-title">Crear Nuevo Material</h2>
+            <form id="material-form" class="space-y-4">
+                <input type="hidden" id="material-id" name="id">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="md:col-span-2">
+                        <label for="material-nombre" class="block text-gray-700 font-medium mb-2">Nombre del Material</label>
+                        <input type="text" id="material-nombre" name="nombre" class="w-full" required>
+                    </div>
+                    <div class="flex items-center gap-2 mt-6 md:mt-0">
+                        <input type="checkbox" id="material-protegido" name="protegido" class="">
+                        <label for="material-protegido" class="text-gray-700">Protegido</label>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-4">
+                    <button type="button" id="cancel-btn" class="hidden px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition duration-300">Cancelar Edición</button>
+                    <button type="submit" class="btn-primary" id="submit-btn">REGISTRAR</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-xl form-card">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <h2 class="text-xl font-semibold text-gray-700">Lista de Materiales</h2>
+                <input type="text" id="filtro" class="w-full sm:w-64" placeholder="Buscar por nombre...">
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Protegido</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="materiales-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+                </table>
+            </div>
+            <div class="flex items-center justify-between mt-4" id="pager" style="display:none;">
+                <button id="prev-page" class="px-3 py-1 bg-gray-200 rounded">Anterior</button>
+                <div id="page-info" class="text-sm text-gray-600">Página 1 de 1</div>
+                <button id="next-page" class="px-3 py-1 bg-gray-200 rounded">Siguiente</button>
+            </div>
+            <p id="loading-message" class="text-center p-4 text-gray-500">Cargando materiales...</p>
+        </div>
+    </main>
+
+    <footer class="p-4 text-center text-gray-500 text-sm">
+        Sistema de Trazabilidad &copy; <?php echo date('Y'); ?> - 
+        by <a href="mailto:ganoderico@gmail.com" class="inline-flex items-center gap-0.5" title="Escribir a vibo" aria-label="Escribir a vibo">
+            <span style="color:#FACC15; font-weight:700">v</span>
+            <span style="color:#3B82F6; font-weight:700">i</span>
+            <span style="color:#EF4444; font-weight:700">b</span>
+            <span style="color:#22C55E; font-weight:700">o</span>
+        </a>
+    </footer>
+
+    <script src="<?php echo $base_url; ?>frontend/assets/js/scripts.js"></script>
+    <script>
+        const form = document.getElementById('material-form');
+        const tableBody = document.getElementById('materiales-table-body');
+        const formTitle = document.getElementById('form-title');
+        const submitBtn = document.getElementById('submit-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const materialIdInput = document.getElementById('material-id');
+        const materialNombreInput = document.getElementById('material-nombre');
+        const materialProtegidoInput = document.getElementById('material-protegido');
+        const loadingMessage = document.getElementById('loading-message');
+        const API_ENDPOINT = 'materiales';
+
+        let dataAll = [];
+        let filtered = [];
+        let page = 1;
+        const pageSize = 10;
+
+        async function fetchMateriales() {
+            loadingMessage.classList.remove('hidden');
+            const result = await callApi(API_ENDPOINT, 'GET');
+            tableBody.innerHTML = '';
+            dataAll = [];
+            loadingMessage.classList.add('hidden');
+
+            if (result.success && Array.isArray(result.data)) {
+                dataAll = result.data;
+                filtered = dataAll;
+                page = 1;
+                renderPage();
+            } else if (result.success) {
+                tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500">No hay materiales registrados.</td></tr>';
+            } else {
+                showMessageModal('Error', result.message || 'Error al cargar materiales.', 'error');
+            }
+        }
+
+        function createRow(item) {
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-gray-100 transition duration-150';
+            const inUse = String(item.in_use) === '1' || item.in_use === 1 || item.in_use === true;
+            const protegido = String(item.protegido) === '1' || item.protegido === 1 || item.protegido === true;
+            tr.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${item.id}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${item.nombre}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-center text-sm ${protegido ? 'text-teal-700' : 'text-gray-500'}">${protegido ? 'Sí' : 'No'}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                    <button data-id="${item.id}" class="edit-btn text-teal-600 hover:text-teal-900 mr-3">Editar</button>
+                    ${protegido || inUse
+                        ? '<span class="text-gray-400 italic">No elim.</span>'
+                        : `<button data-id="${item.id}" data-nombre="${item.nombre}" class="delete-btn text-red-600 hover:text-red-900">Eliminar</button>`}
+                </td>`;
+            return tr;
+        }
+
+        function renderPage() {
+            tableBody.innerHTML = '';
+            const total = filtered.length;
+            if (total === 0) {
+                tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500">No hay materiales registrados.</td></tr>';
+                document.getElementById('pager').style.display = 'none';
+                return;
+            }
+            const totalPages = Math.max(1, Math.ceil(total / pageSize));
+            page = Math.min(page, totalPages);
+            const start = (page - 1) * pageSize;
+            const slice = filtered.slice(start, start + pageSize);
+            slice.forEach(it => tableBody.appendChild(createRow(it)));
+            const pager = document.getElementById('pager');
+            const pageInfo = document.getElementById('page-info');
+            const prevBtn = document.getElementById('prev-page');
+            const nextBtn = document.getElementById('next-page');
+            pager.style.display = total > pageSize ? 'flex' : 'none';
+            pageInfo.textContent = `Página ${page} de ${totalPages}`;
+            prevBtn.disabled = page <= 1;
+            nextBtn.disabled = page >= totalPages;
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = materialIdInput.value;
+            const nombre = materialNombreInput.value.trim();
+            const protegido = materialProtegidoInput.checked ? 1 : 0;
+            const isEditing = id !== '';
+            const method = isEditing ? 'PUT' : 'POST';
+            const payload = isEditing ? { id, nombre, protegido } : { nombre, protegido };
+            const result = await callApi(API_ENDPOINT, method, payload);
+            if (result.success) {
+                showMessageModal('Éxito', `Material ${nombre} ${isEditing ? 'actualizado' : 'creado'} exitosamente.`, 'success');
+                resetFormState();
+                fetchMateriales();
+            } else {
+                showMessageModal('Error', result.message || 'No se pudo guardar el material.', 'error');
+            }
+        });
+
+        tableBody.addEventListener('click', (e) => {
+            if (e.target.classList.contains('edit-btn')) {
+                const id = e.target.dataset.id;
+                const mat = dataAll.find(r => r.id == id);
+                if (mat) {
+                    materialIdInput.value = mat.id;
+                    materialNombreInput.value = mat.nombre;
+                    materialProtegidoInput.checked = String(mat.protegido) === '1' || mat.protegido === 1 || mat.protegido === true;
+                    formTitle.textContent = 'Editar Material ID: ' + mat.id;
+                    submitBtn.textContent = 'GUARDAR CAMBIOS';
+                    cancelBtn.classList.remove('hidden');
+                }
+            } else if (e.target.classList.contains('delete-btn')) {
+                handleDelete(e.target.dataset.id, e.target.dataset.nombre);
+            }
+        });
+
+        async function handleDelete(id, nombre) {
+            if (!confirm(`¿Eliminar material "${nombre}" (ID: ${id})?`)) return;
+            const result = await callApi(API_ENDPOINT, 'DELETE', { id });
+            if (result.success) {
+                showMessageModal('Éxito', `Material ${nombre} eliminado.`, 'success');
+                fetchMateriales();
+            } else {
+                showMessageModal('Error', result.message || 'No se pudo eliminar el material.', 'error');
+            }
+        }
+
+        function resetFormState() {
+            materialIdInput.value = '';
+            materialNombreInput.value = '';
+            materialProtegidoInput.checked = false;
+            formTitle.textContent = 'Crear Nuevo Material';
+            submitBtn.textContent = 'REGISTRAR';
+            cancelBtn.classList.add('hidden');
+        }
+
+        cancelBtn.addEventListener('click', resetFormState);
+
+        window.onload = () => {
+            fetchMateriales();
+            const prevBtn = document.getElementById('prev-page');
+            const nextBtn = document.getElementById('next-page');
+            prevBtn.addEventListener('click', () => { if (page > 1) { page--; renderPage(); }});
+            nextBtn.addEventListener('click', () => { const totalPages = Math.max(1, Math.ceil((filtered.length||0)/pageSize)); if (page < totalPages) { page++; renderPage(); }});
+            const filtro = document.getElementById('filtro');
+            filtro.addEventListener('input', () => {
+                const q = filtro.value.toLowerCase();
+                filtered = dataAll.filter(r => (r.nombre||'').toLowerCase().includes(q));
+                page = 1; renderPage();
+            });
+
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', async function(e) {
+                    e.preventDefault();
+                    const result = await callApi('logout', 'GET');
+                    if (result.success) {
+                        const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
+                        window.location.href = base;
+                    } else {
+                        showMessageModal('Error', 'No se pudo cerrar sesión.', 'error');
+                    }
+                });
+            }
+        };
+    </script>
+</body>
+</html>

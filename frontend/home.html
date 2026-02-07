@@ -1,0 +1,181 @@
+<?php
+// PHP include file. Requiere que $base_url esté definido en index.php
+require_once __DIR__ . '/../backend/controllers/AuthController.php'; 
+$page_title = "Inicio | Trazabilidad";
+
+$user_nombre = SessionManager::get('user_nombre') ?? 'Usuario';
+?>
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+        <?php echo $page_title; ?>
+    </title>
+    <!-- Incluimos los estilos base -->
+    <link rel="stylesheet" href="<?php echo $base_url; ?>frontend/assets/css/styles.css">
+</head>
+
+<body class="bg-gray-200 flex flex-col min-h-screen">
+
+    <!-- Navbar/Header -->
+    <header
+        class="fixed top-0 left-0 right-0 p-4 shadow-md text-white z-10 flex justify-between items-center flex-wrap gap-2">
+        <h1 class="text-xl font-bold accent-underline">Sistema de Trazabilidad</h1>
+        <nav class="flex flex-wrap items-center gap-3 text-sm">
+            <span class="hidden sm:inline">Hola,
+                <?php echo htmlspecialchars($user_nombre); ?>
+            </span>
+            <a href="#" id="btn-change-pass" class="hover:opacity-90" title="Cambiar contraseña" aria-label="Cambiar contraseña">
+                <span aria-hidden="true" class="icon icon-lg icon-gold">🔑</span>
+            </a>
+            <a href="#" id="logout-btn" class="hover:opacity-90" title="Cerrar sesión" aria-label="Cerrar sesión">
+                <span aria-hidden="true" class="icon icon-lg icon-gold">⭕</span>
+            </a>
+        </nav>
+    </header>
+
+    <!-- Contenedor Principal de la Aplicación -->
+    <main id="app-content" class="container mx-auto p-4 mt-20 flex-grow max-w-6xl">
+
+        <div class="text-center mb-10">
+            <h2 class="text-3xl font-bold text-gray-800 mb-2">Panel de Control Principal</h2>
+            <p class="text-lg text-gray-600">Selecciona una opción para comenzar a gestionar los procesos de joyería.
+            </p>
+        </div>
+
+        <!-- Opciones de Navegación -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 home-dark" style="align-items: stretch;">
+
+            <!-- Opción 1: Ingreso de Trazabilidad (Paso 8/9) -->
+            <a href="<?php echo $base_url; ?>trazabilidad" class="nav-card h-full">
+                <div class="text-4xl mb-4 text-teal-600">📝</div>
+                <h3 class="text-xl font-semibold mb-2">Registro de Trazabilidad</h3>
+                <p class="text-sm text-gray-600">Registrar nuevas Entregas y Recibidos de material.</p>
+            </a>
+
+            <!-- Opción 2: Reporte General (Paso 11) -->
+            <a href="<?php echo $base_url; ?>trazabilidad_list" class="nav-card h-full">
+                <div class="text-4xl mb-4 text-teal-600">📊</div>
+                <h3 class="text-xl font-semibold mb-2">Vista General y Reporte</h3>
+                <p class="text-sm text-gray-600">Consulta la tabla histórica de todos los movimientos.</p>
+            </a>
+
+            <!-- Opción 3: CRUD Responsables (Paso 4) - solo visible si admin -->
+            <a href="<?php echo $base_url; ?>responsables" class="nav-card h-full" id="card-responsables" style="display:none;">
+                <div class="text-4xl mb-4 text-teal-600">🧑‍🏭</div>
+                <h3 class="text-xl font-semibold mb-2">Gestión de Responsables</h3>
+                <p class="text-sm text-gray-600">Altas, bajas y modificaciones de personal.</p>
+            </a>
+
+            <!-- Opción 4: CRUD Procesos (Paso 5) -->
+            <a href="<?php echo $base_url; ?>procesos" class="nav-card h-full">
+                <div class="text-4xl mb-4 text-teal-600">⚙️</div>
+                <h3 class="text-xl font-semibold mb-2">Gestión de Procesos</h3>
+                <p class="text-sm text-gray-600">Administra los tipos de procesos de joyería.</p>
+            </a>
+
+            <!-- Opción 5: CRUD Productos (Paso 6) -->
+            <a href="<?php echo $base_url; ?>productos" class="nav-card h-full">
+                <div class="text-4xl mb-4 text-teal-600">💍</div>
+                <h3 class="text-xl font-semibold mb-2">Gestión de Productos</h3>
+                <p class="text-sm text-gray-600">Administra los catálogos de productos.</p>
+            </a>
+
+            <!-- Opción 7: CRUD Materiales -->
+            <a href="<?php echo $base_url; ?>materiales" class="nav-card h-full">
+                <div class="text-4xl mb-4 text-teal-600">🧱</div>
+                <h3 class="text-xl font-semibold mb-2">Gestión de Materiales</h3>
+                <p class="text-sm text-gray-600">Administra materiales, protección y uso.</p>
+            </a>
+
+            <!-- Opción 6: Gestión de Usuarios (solo visible si admin) -->
+            <a href="<?php echo $base_url; ?>usuarios" class="nav-card h-full" id="card-usuarios" style="display:none;">
+                <div class="text-4xl mb-4 text-teal-600" title="Usuarios" aria-hidden="true">👩‍🔬</div>
+                <h3 class="text-xl font-semibold mb-2">Gestión de Usuarios</h3>
+                <p class="text-sm text-gray-600">Crear, editar y eliminar cuentas de acceso.</p>
+            </a>
+
+        </div>
+
+    </main>
+
+    <footer class="p-4 text-center text-gray-500 text-sm">
+        Sistema de Trazabilidad &copy;
+        <?php echo date('Y'); ?> -
+        by <a href="mailto:ganoderico@gmail.com" class="inline-flex items-center gap-0.5" title="Escribir a vibo"
+            aria-label="Escribir a vibo">
+            <span style="color:#FACC15; font-weight:700">v</span>
+            <span style="color:#3B82F6; font-weight:700">i</span>
+            <span style="color:#EF4444; font-weight:700">b</span>
+            <span style="color:#22C55E; font-weight:700">o</span>
+        </a>
+    </footer>
+
+    <!-- Incluimos el script principal -->
+    <script src="<?php echo $base_url; ?>frontend/assets/js/scripts.js"></script>
+    <script>
+        // Lógica de Logout
+        document.getElementById('logout-btn').addEventListener('click', async function (e) {
+            e.preventDefault();
+            const result = await callApi('logout', 'GET');
+
+            if (result.success) {
+                showMessageModal('Sesión Cerrada', 'Has cerrado tu sesión.', 'info');
+                // Redirigir al login respetando el subdirectorio (app_oro/index.php)
+                const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
+                window.location.href = base;
+            } else {
+                showMessageModal('Error de Sesión', result.message || 'Error al intentar cerrar sesión. Intenta de nuevo.', 'error');
+            }
+        });
+
+        // Mostrar tarjetas de admin (Usuarios y Responsables) si es admin
+        // Hacemos la verificación silenciosamente usando fetch directo para evitar el banner de error
+        (async () => {
+            try {
+                const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
+                const url = base.replace(/\/$/, '') + '/api/usuarios';
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (response.ok) {
+                    // Si puede acceder a usuarios, es admin - mostrar ambas tarjetas
+                    const cardUsuarios = document.getElementById('card-usuarios');
+                    const cardResponsables = document.getElementById('card-responsables');
+                    if (cardUsuarios) cardUsuarios.style.display = 'block';
+                    if (cardResponsables) cardResponsables.style.display = 'block';
+                }
+                // Si no es admin (403), simplemente no mostramos las tarjetas (comportamiento silencioso)
+            } catch (error) {
+                // Error de red u otro - también comportamiento silencioso
+                console.log('Error verificando permisos de admin (esperado para operarios):', error.message);
+            }
+        })();
+
+        // Cambiar contraseña propia
+        document.getElementById('btn-change-pass').addEventListener('click', async (e) => {
+            e.preventDefault();
+            const current = prompt('Introduce tu contraseña actual:');
+            if (current === null) return;
+            const newPass = prompt('Nueva contraseña (min 8 caracteres):');
+            if (newPass === null) return;
+            if (newPass.length < 8) { showMessageModal('Validación', 'La nueva contraseña debe tener al menos 8 caracteres.', 'info'); return; }
+            const confirm = prompt('Confirmar nueva contraseña:');
+            if (confirm === null) return;
+            if (newPass !== confirm) { showMessageModal('Validación', 'La confirmación no coincide.', 'info'); return; }
+            const r = await callApi('change-password', 'POST', { current_password: current, new_password: newPass, confirm_password: confirm });
+            if (r.success) {
+                showMessageModal('Éxito', r.message || 'Contraseña actualizada.', 'success');
+            } else {
+                showMessageModal('Error', r.message || 'No se pudo actualizar la contraseña.', 'error');
+            }
+        });
+    </script>
+</body>
+
+</html>

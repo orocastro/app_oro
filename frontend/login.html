@@ -1,0 +1,156 @@
+<?php
+// PHP include file. Requiere que $base_url esté definido en index.php
+$page_title = "Login | Trazabilidad";
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo $page_title; ?></title>
+    <!-- Incluimos los estilos base -->
+    <link rel="stylesheet" href="<?php echo $base_url; ?>frontend/assets/css/styles.css">
+</head>
+<body class="bg-gray-200 flex flex-col min-h-screen">
+
+    <!-- Navbar/Header Placeholder -->
+    <header class="fixed top-0 left-0 right-0 p-4 shadow-md text-white z-10" style="background-color: #00796B;">
+        <div class="flex justify-between items-center flex-wrap gap-2">
+            <h1 class="text-xl font-bold">Sistema de Trazabilidad</h1>
+            <nav class="flex flex-wrap gap-3 text-sm items-center">
+                <span class="hidden sm:inline">Hola, <?php echo htmlspecialchars(SessionManager::get('user_nombre') ?? ''); ?></span>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Contenedor Principal de la Aplicación -->
+    <main id="app-content" class="container mx-auto p-4 mt-20 flex-grow max-w-lg">
+        
+        <!-- VISTA DE LOGIN -->
+        <div id="login-view" class="bg-white p-8 rounded-lg shadow-xl form-card">
+            <h2 class="text-2xl font-semibold mb-6 text-center text-gray-700">Acceso al Sistema</h2>
+            <form id="login-form">
+                <div class="mb-4">
+                    <label for="usuario" class="block text-gray-700 font-medium mb-2">Usuario (Correo)</label>
+                    <input type="email" id="usuario" name="usuario" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600" required>
+                </div>
+                <div class="mb-6">
+                    <label for="clave" class="block text-gray-700 font-medium mb-2">Clave</label>
+                    <input type="password" id="clave" name="clave" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600" required>
+                </div>
+                <button type="submit" class="w-full btn-primary shadow-lg" id="login-btn">
+                    INGRESAR
+                </button>
+            </form>
+            <p class="text-center mt-4 text-sm">
+                <a href="#" id="recover-link" class="text-teal-600 hover:text-teal-800">¿Olvidaste tu contraseña?</a>
+            </p>
+        </div>
+        
+        <!-- VISTA DE RECUPERACIÓN (Oculta inicialmente) -->
+        <div id="recover-view" class="bg-white p-8 rounded-lg shadow-xl form-card hidden">
+            <h2 class="text-2xl font-semibold mb-6 text-center text-gray-700">Recuperar Contraseña</h2>
+            <p class="text-gray-600 mb-4 text-sm">Ingresa tu correo electrónico para enviarte un enlace de restablecimiento.</p>
+            <form id="recover-form">
+                <div class="mb-4">
+                    <label for="recover-usuario" class="block text-gray-700 font-medium mb-2">Usuario (Correo)</label>
+                    <input type="email" id="recover-usuario" name="usuario" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600" required>
+                </div>
+                <button type="submit" class="w-full btn-primary shadow-lg mb-4">
+                    ENVIAR ENLACE
+                </button>
+            </form>
+            <p class="text-center text-sm">
+                <a href="#" id="login-link" class="text-teal-600 hover:text-teal-800">Volver al Login</a>
+            </p>
+        </div>
+
+
+    </main>
+
+    <footer class="p-4 text-center text-gray-500 text-sm">
+        Sistema de Trazabilidad &copy; <?php echo date('Y'); ?> - 
+        by <a href="mailto:ganoderico@gmail.com" class="inline-flex items-center gap-0.5" title="Escribir a vibo" aria-label="Escribir a vibo">
+            <span style="color:#FACC15; font-weight:700">v</span>
+            <span style="color:#3B82F6; font-weight:700">i</span>
+            <span style="color:#EF4444; font-weight:700">b</span>
+            <span style="color:#22C55E; font-weight:700">o</span>
+        </a>
+    </footer>
+    
+    <!-- Incluimos el script principal -->
+    <script src="<?php echo $base_url; ?>frontend/assets/js/scripts.js"></script>
+    <script>
+        const loginView = document.getElementById('login-view');
+        const recoverView = document.getElementById('recover-view');
+        const recoverLink = document.getElementById('recover-link');
+        const loginLink = document.getElementById('login-link');
+        const loginForm = document.getElementById('login-form');
+        const recoverForm = document.getElementById('recover-form');
+
+        // Función para cambiar de vista (Login <-> Recuperación)
+        function toggleViews(showLogin) {
+            if (showLogin) {
+                loginView.classList.remove('hidden');
+                recoverView.classList.add('hidden');
+            } else {
+                loginView.classList.add('hidden');
+                recoverView.classList.remove('hidden');
+            }
+        }
+
+        recoverLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            toggleViews(false);
+        });
+
+        loginLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            toggleViews(true);
+        });
+
+        // 1. Lógica de Login (POST /api/login)
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('login-btn');
+            const originalText = btn.textContent;
+            btn.textContent = 'Ingresando...';
+            btn.disabled = true;
+
+            const usuario = document.getElementById('usuario').value;
+            const clave = document.getElementById('clave').value;
+            
+            const result = await callApi('login', 'POST', { usuario, clave });
+
+            if (result.success) {
+                showMessageModal('¡Bienvenido!', `Hola ${result.user.nombre}. Acceso concedido.`, 'success');
+                // Redirigir a la vista principal respetando la BASE_URL
+                const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
+                window.location.href = base + 'home';
+            } else {
+                showMessageModal('Error de Acceso', result.message || 'Error desconocido al iniciar sesión.', 'error');
+            }
+            
+            btn.textContent = originalText;
+            btn.disabled = false;
+        });
+
+        // 2. Lógica de Recuperación (POST /api/recover)
+        recoverForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const usuario = document.getElementById('recover-usuario').value;
+            
+            const result = await callApi('recover', 'POST', { usuario });
+
+            if (result.success) {
+                showMessageModal('Instrucciones Enviadas', result.message, 'success');
+                // Volver al login tras enviar la petición
+                toggleViews(true);
+                recoverForm.reset();
+            } else {
+                showMessageModal('Error', result.message || 'Error desconocido al solicitar recuperación.', 'error');
+            }
+        });
+    </script>
+</body>
+</html>

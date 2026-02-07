@@ -1,0 +1,364 @@
+<?php
+// PHP include file. Requiere que $base_url esté definido en index.php
+require_once __DIR__ . '/../backend/controllers/AuthController.php'; 
+if (!SessionManager::get('logged_in')) {
+    header('Location: ' . $base_url);
+    exit();
+}
+$page_title = "Gestión de Usuarios | Trazabilidad";
+$user_nombre = SessionManager::get('user_nombre') ?? 'Usuario';
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="current-user-id" content="<?php echo htmlspecialchars((string)(SessionManager::get('user_id') ?? '')); ?>">
+    <title><?php echo $page_title; ?></title>
+    <link rel="stylesheet" href="<?php echo $base_url; ?>frontend/assets/css/styles.css">
+</head>
+<body class="bg-gray-200 flex flex-col min-h-screen">
+    <header class="fixed top-0 left-0 right-0 p-4 shadow-md text-white z-10 flex justify-between items-center flex-wrap gap-2">
+        <h1 class="text-xl font-bold accent-underline">Gestión de Usuarios</h1>
+        <nav class="flex flex-wrap gap-3 text-sm items-center">
+            <span class="hidden sm:inline">Hola, <?php echo htmlspecialchars(SessionManager::get('user_nombre') ?? 'Usuario'); ?></span>
+            <a href="<?php echo $base_url; ?>home" class="hover:opacity-90" title="Inicio" aria-label="Inicio"><span class="icon icon-lg icon-gold" aria-hidden="true"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><path d="M12 3l10 9h-3v9h-5v-6H10v6H5v-9H2l10-9z"/></svg></span></a>
+            <a href="#" id="logout-btn" class="hover:opacity-90" title="Cerrar sesión" aria-label="Cerrar sesión"><span aria-hidden="true" class="icon icon-lg icon-gold">⭕</span></a>
+        </nav>
+    </header>
+
+    <main class="container mx-auto p-4 mt-20 flex-grow max-w-6xl">
+        <div class="bg-white p-6 rounded-lg shadow-xl form-card mb-8">
+            <h2 class="text-xl font-semibold mb-4 text-gray-700" id="form-title">Crear Nuevo Usuario</h2>
+            <form id="usuario-form" class="space-y-4" novalidate>
+                <input type="hidden" id="usuario-id" name="id">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2" for="usuario-nombre">Nombre</label>
+                        <input type="text" id="usuario-nombre" name="nombre" class="w-full" required minlength="2">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2" for="usuario-correo">Usuario (correo)</label>
+                        <input type="email" id="usuario-correo" name="usuario" class="w-full" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2" for="usuario-clave">Clave</label>
+                        <input type="password" id="usuario-clave" name="clave" class="w-full" placeholder="(Dejar vacío para no cambiar al editar)" minlength="8">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2" for="usuario-rol">Rol</label>
+                        <select id="usuario-rol" name="rol" class="w-full">
+                            <option value="operador">Operador</option>
+                            <option value="admin">Administrador</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button type="button" id="cancel-btn" class="hidden px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500">Cancelar Edición</button>
+                    <button type="submit" id="submit-btn" class="btn-primary">REGISTRAR</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-xl">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <h2 class="text-xl font-semibold text-gray-700">Lista de Usuarios</h2>
+                <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <input type="text" id="filtro" class="w-full sm:w-64" placeholder="Buscar por nombre o usuario...">
+                    <button id="btn-change-password" class="px-3 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 w-full sm:w-auto" title="Cambiar mi contraseña" aria-label="Cambiar mi contraseña"><span aria-hidden="true" class="icon icon-lg icon-gold">🔑</span></button>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rol</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Creado</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usuarios-body" class="bg-white divide-y divide-gray-200"></tbody>
+                </table>
+            </div>
+            <div class="flex items-center justify-between mt-4" id="pager" style="display:none;">
+                <button id="prev-page" class="px-3 py-1 bg-gray-200 rounded">Anterior</button>
+                <div id="page-info" class="text-sm text-gray-600">Página 1 de 1</div>
+                <button id="next-page" class="px-3 py-1 bg-gray-200 rounded">Siguiente</button>
+            </div>
+            <p id="loading" class="text-center p-4 text-gray-500">Cargando usuarios...</p>
+        </div>
+    </main>
+
+    <footer class="p-4 text-center text-gray-500 text-sm">
+        Sistema de Trazabilidad &copy; <?php echo date('Y'); ?> - 
+        by <a href="mailto:ganoderico@gmail.com" class="inline-flex items-center gap-0.5" title="Escribir a vibo" aria-label="Escribir a vibo">
+            <span style="color:#FACC15; font-weight:700">v</span>
+            <span style="color:#3B82F6; font-weight:700">i</span>
+            <span style="color:#EF4444; font-weight:700">b</span>
+            <span style="color:#22C55E; font-weight:700">o</span>
+        </a>
+    </footer>
+
+    <script src="<?php echo $base_url; ?>frontend/assets/js/scripts.js"></script>
+    <script>
+        // ID del usuario actual desde meta en <head>
+        (function(){
+            var meta = document.querySelector('meta[name="current-user-id"]');
+            window.CURRENT_USER_ID = meta && meta.content ? meta.content : null;
+        })();
+    </script>
+    <script>
+        const API = 'usuarios';
+        const form = document.getElementById('usuario-form');
+        const idInput = document.getElementById('usuario-id');
+        const nombreInput = document.getElementById('usuario-nombre');
+        const correoInput = document.getElementById('usuario-correo');
+        const claveInput = document.getElementById('usuario-clave');
+        const submitBtn = document.getElementById('submit-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const body = document.getElementById('usuarios-body');
+        const loading = document.getElementById('loading');
+        const filtro = document.getElementById('filtro');
+        const rolInput = document.getElementById('usuario-rol');
+        const pager = document.getElementById('pager');
+        const prevBtn = document.getElementById('prev-page');
+        const nextBtn = document.getElementById('next-page');
+        const pageInfo = document.getElementById('page-info');
+        const changePassBtn = document.getElementById('btn-change-password');
+
+        let dataCache = [];
+        let filteredCache = [];
+        let page = 1;
+        const pageSize = 10;
+
+        function renderRows(list) {
+            body.innerHTML = '';
+            if (!list || list.length === 0) {
+                body.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-500">Sin usuarios</td></tr>';
+                pager.style.display = 'none';
+                return;
+            }
+            // paginación
+            const total = list.length;
+            const totalPages = Math.max(1, Math.ceil(total / pageSize));
+            page = Math.min(page, totalPages);
+            const start = (page - 1) * pageSize;
+            const slice = list.slice(start, start + pageSize);
+            // encabezado/controles
+            pageInfo.textContent = `Página ${page} de ${totalPages}`;
+            prevBtn.disabled = page <= 1;
+            nextBtn.disabled = page >= totalPages;
+            pager.style.display = total > pageSize ? 'flex' : 'none';
+
+            slice.forEach(u => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-100';
+                const isOnlyAdmin = !!u.is_only_admin;
+                const isSelf = window.CURRENT_USER_ID && String(u.id) === String(window.CURRENT_USER_ID);
+                tr.innerHTML = `
+                    <td class="px-6 py-3">${u.id}</td>
+                    <td class="px-6 py-3">${u.nombre}</td>
+                    <td class="px-6 py-3">${u.usuario}</td>
+                    <td class="px-6 py-3">${(u.rol || 'operador')}${isOnlyAdmin ? ' <span class="text-xs text-gray-500">(Único admin)</span>' : ''}</td>
+                    <td class="px-6 py-3">${u.fecha_creacion || '-'}</td>
+                    <td class="px-6 py-3 text-center">
+                        <button class="text-teal-600 hover:text-teal-900 mr-3 edit-btn" data-id="${u.id}" data-only-admin="${isOnlyAdmin}">Editar</button>
+                        ${isOnlyAdmin
+                            ? '<span class="text-gray-400" title="Protegido: no se puede eliminar">Protegido</span>'
+                            : (isSelf
+                                ? '<span class="text-gray-400" title="No puedes eliminar tu propio usuario">Protegido</span>'
+                                : `<button class="text-red-600 hover:text-red-900 delete-btn" data-id="${u.id}" data-nombre="${u.nombre}">Eliminar</button>`
+                              )
+                        }
+                    </td>
+                `;
+                body.appendChild(tr);
+            });
+        }
+
+        async function loadUsers() {
+            loading.classList.remove('hidden');
+            const res = await callApi(API, 'GET');
+            loading.classList.add('hidden');
+            if (res.success) {
+                dataCache = res.data;
+                filteredCache = dataCache;
+                page = 1;
+                renderRows(filteredCache);
+            } else {
+                showMessageModal('Error', res.message || 'No se pudo cargar usuarios', 'error');
+            }
+        }
+
+        // Crear / Actualizar
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = idInput.value;
+            // Validaciones manuales
+            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!nombreInput.value.trim() || nombreInput.value.trim().length < 2) {
+                showMessageModal('Validación', 'Nombre mínimo de 2 caracteres.', 'info');
+                return;
+            }
+            if (!emailPattern.test(correoInput.value.trim())) {
+                showMessageModal('Validación', 'Ingresa un correo válido.', 'info');
+                return;
+            }
+            const payload = {
+                nombre: nombreInput.value.trim(),
+                usuario: correoInput.value.trim(),
+                rol: rolInput.value
+            };
+            if (!id) {
+                payload.clave = claveInput.value; // requerida al crear
+                if (!payload.clave) {
+                    showMessageModal('Validación', 'La clave es obligatoria al crear.', 'info');
+                    return;
+                }
+                if (payload.clave.length < 8) {
+                    showMessageModal('Validación', 'La clave debe tener al menos 8 caracteres.', 'info');
+                    return;
+                }
+            } else if (claveInput.value) {
+                payload.id = id;
+                payload.clave = claveInput.value; // opcional al editar
+                if (payload.clave.length < 8) {
+                    showMessageModal('Validación', 'La nueva clave debe tener al menos 8 caracteres.', 'info');
+                    return;
+                }
+            } else {
+                payload.id = id;
+            }
+
+            const method = id ? 'PUT' : 'POST';
+            const res = await callApi(API, method, payload);
+            if (res.success) {
+                showMessageModal('Éxito', res.message || 'Operación exitosa', 'success');
+                form.reset();
+                idInput.value = '';
+                submitBtn.textContent = 'REGISTRAR';
+                cancelBtn.classList.add('hidden');
+                loadUsers();
+            } else {
+                showMessageModal('Error', res.message || 'No se pudo guardar', 'error');
+            }
+        });
+
+        // Editar / Eliminar
+        body.addEventListener('click', (e) => {
+            const t = e.target;
+            if (t.classList.contains('edit-btn')) {
+                const id = t.dataset.id;
+                const u = dataCache.find(x => String(x.id) === String(id));
+                if (!u) return;
+                idInput.value = u.id;
+                nombreInput.value = u.nombre;
+                correoInput.value = u.usuario;
+                claveInput.value = '';
+                submitBtn.textContent = 'GUARDAR CAMBIOS';
+                cancelBtn.classList.remove('hidden');
+                // Si es el único admin, bloquear cambio de rol
+                if (u.is_only_admin) {
+                    rolInput.value = 'admin';
+                    rolInput.disabled = true;
+                } else {
+                    rolInput.disabled = false;
+                    rolInput.value = u.rol || 'operador';
+                }
+            }
+            if (t.classList.contains('delete-btn')) {
+                const id = t.dataset.id;
+                const nombre = t.dataset.nombre;
+                if (!confirm(`¿Eliminar usuario ${nombre} (ID ${id})?`)) return;
+                callApi(API, 'DELETE', { id }).then(res => {
+                    if (res.success) {
+                        showMessageModal('Éxito', res.message || 'Eliminado', 'success');
+                        loadUsers();
+                    } else {
+                        showMessageModal('Error', res.message || 'No se pudo eliminar', 'error');
+                    }
+                });
+            }
+        });
+
+        cancelBtn.addEventListener('click', () => {
+            idInput.value = '';
+            form.reset();
+            submitBtn.textContent = 'REGISTRAR';
+            cancelBtn.classList.add('hidden');
+            rolInput.disabled = false;
+        });
+
+        // Filtro rápido
+        filtro.addEventListener('input', () => {
+            const q = filtro.value.toLowerCase();
+            filteredCache = dataCache.filter(u =>
+                (u.nombre || '').toLowerCase().includes(q) || (u.usuario || '').toLowerCase().includes(q)
+            );
+            page = 1;
+            renderRows(filteredCache);
+        });
+
+        prevBtn.addEventListener('click', () => {
+            if (page > 1) { page--; renderRows(filteredCache); }
+        });
+        nextBtn.addEventListener('click', () => {
+            const totalPages = Math.max(1, Math.ceil(filteredCache.length / pageSize));
+            if (page < totalPages) { page++; renderRows(filteredCache); }
+        });
+
+        // Cambiar mi contraseña (propio)
+        changePassBtn.addEventListener('click', async () => {
+            const current = prompt('Introduce tu contraseña actual:');
+            if (current === null) return;
+            const newPass = prompt('Nueva contraseña (min 8 caracteres):');
+            if (newPass === null) return;
+            if (newPass.length < 8) { showMessageModal('Validación', 'La nueva contraseña debe tener al menos 8 caracteres.', 'info'); return; }
+            const confirm = prompt('Confirmar nueva contraseña:');
+            if (confirm === null) return;
+            if (newPass !== confirm) { showMessageModal('Validación', 'La confirmación no coincide.', 'info'); return; }
+            const res = await callApi('change-password', 'POST', { current_password: current, new_password: newPass, confirm_password: confirm });
+            if (res.success) {
+                showMessageModal('Éxito', res.message || 'Contraseña actualizada.', 'success');
+            } else {
+                showMessageModal('Error', res.message || 'No se pudo actualizar la contraseña.', 'error');
+            }
+        });
+
+        // Logout
+        document.getElementById('logout-btn').addEventListener('click', async function (e) {
+            e.preventDefault();
+            const result = await callApi('logout', 'GET');
+            if (result.success) {
+                const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
+                window.location.href = base;
+            } else {
+                showMessageModal('Error', 'No se pudo cerrar sesión.', 'error');
+            }
+        });
+
+        window.onload = async () => {
+            // Si el usuario no es admin, redirigir o bloquear (la API igual lo bloqueará)
+            // Mejor: intentar cargar y, si 403, mostramos mensaje y vamos al home.
+            const res = await callApi(API, 'GET');
+            if (!res.success && /denegado|403|Acceso/.test(res.message || '')) {
+                showMessageModal('Acceso restringido', 'Solo administradores pueden gestionar usuarios.', 'error');
+                const base = window.BASE_URL || '/';
+                window.location.href = base + 'home';
+                return;
+            }
+            // Si éxito, render normal
+            loading.classList.add('hidden');
+            dataCache = res.data || [];
+            filteredCache = dataCache;
+            page = 1;
+            renderRows(filteredCache);
+        };
+    </script>
+</body>
+</html>

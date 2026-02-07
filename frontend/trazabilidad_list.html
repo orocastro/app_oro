@@ -1,0 +1,763 @@
+<?php
+// PHP include file. Requiere que $base_url esté definido en index.php
+require_once __DIR__ . '/../backend/controllers/AuthController.php'; 
+// Protección de ruta: Si no está logueado, redirigir al login
+if (!SessionManager::get('logged_in')) {
+    header('Location: ' . $base_url);
+    exit();
+}
+$page_title = "Listado General de Trazabilidad";
+?>
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+        <?php echo $page_title; ?>
+    </title>
+    <link rel="stylesheet" href="<?php echo $base_url; ?>frontend/assets/css/styles.css">
+    <style>
+        .table-container {
+            overflow-x: auto;
+            max-width: 100%;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1200px;
+            /* Asegura que la tabla no se colapse demasiado */
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 0.875rem;
+            white-space: nowrap;
+            /* Evita que el contenido se rompa en varias líneas */
+        }
+
+        .data-table th {
+            background-color: #00796B;
+            /* teal-600 */
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .data-table tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+
+        .data-table tr:hover {
+            background-color: #f3f4f6;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-pending {
+            background-color: #fef3c7;
+            color: #b45309;
+        }
+
+        /* Amber */
+        .status-completed {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        /* Green */
+        .photo-link {
+            color: #00796B;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .row-highlight {
+            animation: flash 2s ease-in-out 1;
+            box-shadow: inset 0 0 0 9999px rgba(16, 185, 129, 0.15);
+            /* teal-400 overlay */
+        }
+
+        @keyframes flash {
+            0% {
+                background-color: #d1fae5;
+            }
+
+            50% {
+                background-color: #ffffff;
+            }
+
+            100% {
+                background-color: #d1fae5;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-200 flex flex-col min-h-screen">
+
+    <!-- Navbar/Header -->
+    <header
+        class="fixed top-0 left-0 right-0 p-4 shadow-md text-white z-10 flex justify-between items-center flex-wrap gap-2">
+        <h1 class="text-xl font-bold accent-underline">Listado General</h1>
+        <nav class="flex flex-wrap gap-3 text-sm items-center">
+            <span class="hidden sm:inline">Hola,
+                <?php echo htmlspecialchars(SessionManager::get('user_nombre') ?? 'Usuario'); ?>
+            </span>
+            <a href="<?php echo $base_url; ?>home" class="hover:opacity-90" title="Inicio" aria-label="Inicio"><span
+                    class="icon icon-lg icon-gold" aria-hidden="true"><svg viewBox="0 0 24 24" width="1em" height="1em"
+                        fill="currentColor">
+                        <path d="M12 3l10 9h-3v9h-5v-6H10v6H5v-9H2l10-9z" />
+                    </svg></span></a>
+            <a href="#" id="logout-btn" class="hover:opacity-90" title="Cerrar sesión" aria-label="Cerrar sesión"><span
+                    aria-hidden="true" class="icon icon-lg icon-gold">⭕</span></a>
+        </nav>
+    </header>
+
+    <!-- Contenedor Principal de la Aplicación -->
+    <main id="app-content" class="container mx-auto p-4 mt-20 flex-grow">
+        <div class="bg-white p-6 rounded-lg shadow-xl form-card">
+            <div class="flex justify-between items-center mb-4 flex-wrap gap-4">
+                <h2 class="text-2xl font-semibold text-gray-800">Historial de Movimientos</h2>
+                <div class="relative">
+                    <input type="text" id="search-input" placeholder="Buscar..."
+                        class="pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 w-full sm:w-64">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </span>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>CONSECUTIVO</th>
+                            <th>ESTADO</th>
+                            <th>FECHA ENTREGA</th>
+                            <th>FECHA RECIBIDO</th>
+                            <th>PROCESO</th>
+                            <th>RESPONSABLE</th>
+                            <th>PRODUCTO</th>
+                            <th>PESO ENT. Gr</th>
+                            <th>PESO LEY Gr</th>
+                            <th>PESO REC. Gr</th>
+                            <th>MERMA Gr</th>
+                            <th>FOTO ENT.</th>
+                            <th>FOTO REC.</th>
+                            <th>OBSERVACIONES</th>
+                            <th>MATERIALES</th>
+                            <th>ACCIONES</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trazabilidad-body">
+                        <!-- Las filas se cargarán con JavaScript -->
+                        <tr>
+                            <td colspan="15" class="text-center text-gray-500">Cargando datos...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="flex items-center justify-between mt-4" id="pager" style="display:none;">
+                <button id="prev-page" class="px-3 py-1 bg-gray-200 rounded">Anterior</button>
+                <div id="page-info" class="text-sm text-gray-600">Página 1 de 1</div>
+                <button id="next-page" class="px-3 py-1 bg-gray-200 rounded">Siguiente</button>
+            </div>
+
+            <!-- Botón Exportar a Excel (CSV) -->
+            <div
+                style="position: fixed; right: 24px; bottom: 24px; z-index: 20; display: flex; gap: 8px; align-items: center;">
+                <button id="export-excel-btn" class="btn-primary px-4 py-3 shadow-lg" title="Exportar Excel"
+                    aria-label="Exportar Excel">
+                    <span class="icon icon-lg" aria-hidden="true">🖨️</span>
+                </button>
+                <span id="export-status" class="text-sm" style="color:#b45309; display:none;">Biblioteca Excel no
+                    encontrada. Coloque frontend/assets/js/vendor/xlsx.full.min.js</span>
+            </div>
+
+        </div>
+    </main>
+
+    <div id="photo-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold" id="modal-title">Galería de Fotos</h3>
+                <button class="text-gray-500 hover:text-gray-800 text-3xl leading-none" onclick="closePhotoModal();"
+                    aria-label="Cerrar">&times;</button>
+            </div>
+            <div id="modal-gallery" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                <!-- Las imágenes se insertarán aquí -->
+            </div>
+        </div>
+    </div>
+
+    <div id="materials-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg p-6 max-w-5xl w-full max-h-[90vh] overflow-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold" id="materials-title">Materiales</h3>
+                <button class="text-gray-500 hover:text-gray-800 text-3xl leading-none" onclick="closeMaterialsModal();" aria-label="Cerrar">&times;</button>
+            </div>
+            <div id="materials-content" class="space-y-6">
+                <!-- Contenido cargado por JS -->
+            </div>
+        </div>
+    </div>
+
+    <footer class="p-4 text-center text-gray-500 text-sm">
+        Sistema de Trazabilidad &copy;
+        <?php echo date('Y'); ?> -
+        by <a href="mailto:ganoderico@gmail.com" class="inline-flex items-center gap-0.5" title="Escribir a vibo"
+            aria-label="Escribir a vibo">
+            <span style="color:#FACC15; font-weight:700">v</span>
+            <span style="color:#3B82F6; font-weight:700">i</span>
+            <span style="color:#EF4444; font-weight:700">b</span>
+            <span style="color:#22C55E; font-weight:700">o</span>
+        </a>
+    </footer>
+
+    <script src="<?php echo $base_url; ?>frontend/assets/js/scripts.js"></script>
+    <!-- SheetJS local para exportar a XLSX (coloque xlsx.full.min.js en frontend/assets/js/vendor/) -->
+    <script src="<?php echo $base_url; ?>frontend/assets/js/vendor/xlsx.full.min.js"></script>
+    <script>
+        const API_TRAZABILIDAD = 'trazabilidad';
+        const trazabilidadBody = document.getElementById('trazabilidad-body');
+        const photoModal = document.getElementById('photo-modal');
+        const modalGallery = document.getElementById('modal-gallery');
+        const modalTitle = document.getElementById('modal-title');
+        const exportBtn = document.getElementById('export-excel-btn');
+        const searchInput = document.getElementById('search-input');    // Variable para verificar si el usuario es administrador
+        let isAdmin = false;
+
+        // Cache de datos para exportación
+        let trazabilidadDataCache = [];
+        let filteredCache = [];
+        let page = 1;
+        const pageSize = 10;
+        let highlightParam = null;
+
+        /**
+         * Formatea la fecha y hora.
+         */
+        function formatDate(datetimeString) {
+            if (!datetimeString) return '-';
+            try {
+                const date = new Date(datetimeString.replace(' ', 'T'));
+                return date.toLocaleDateString('es-CO', {
+                    year: 'numeric', month: 'short', day: '2-digit',
+                    hour: '2-digit', minute: '2-digit'
+                });
+            } catch (e) {
+                return datetimeString;
+            }
+        }
+
+        function renderRows(list) {
+            trazabilidadBody.innerHTML = '';
+            if (!list || list.length === 0) {
+                trazabilidadBody.innerHTML = '<tr><td colspan="15" class="text-center text-gray-500">No se encontraron registros de trazabilidad.</td></tr>';
+                document.getElementById('pager').style.display = 'none';
+                return;
+            }
+            const total = list.length;
+            const totalPages = Math.max(1, Math.ceil(total / pageSize));
+            page = Math.min(page, totalPages);
+            const start = (page - 1) * pageSize;
+            const slice = list.slice(start, start + pageSize);
+            const pager = document.getElementById('pager');
+            const pageInfo = document.getElementById('page-info');
+            const prevBtn = document.getElementById('prev-page');
+            const nextBtn = document.getElementById('next-page');
+            pageInfo.textContent = `Página ${page} de ${totalPages}`;
+            prevBtn.disabled = page <= 1;
+            nextBtn.disabled = page >= totalPages;
+            pager.style.display = total > pageSize ? 'flex' : 'none';
+
+            let highlightedRow = null;
+
+            slice.forEach(item => {
+                // Nueva lógica: un registro está completado si:
+                // 1. Tiene fecha_recibido (procesos normales completados)
+                // 2. O si es un proceso auto-completado (ID 1,2,3,4) que no necesita recibido
+                const procesoId = parseInt(item.proceso_id || 0);
+                const esProcesoAutoCompletado = [1, 2, 3, 4].includes(procesoId);
+                const isCompleted = item.fecha_recibido !== null || esProcesoAutoCompletado;
+
+                const statusClass = isCompleted ? 'status-completed' : 'status-pending';
+                const statusText = isCompleted ? 'COMPLETADO' : 'PENDIENTE';
+
+                // Mostrar peso_ley siempre que esté disponible
+                const pesoLeyDisplay = ((item.peso_ley_gr === null || item.peso_ley_gr === undefined)
+                    ? '0,00'
+                    : parseFloat(item.peso_ley_gr).toFixed(2).replace('.', ','));
+
+                // Mostrar merma: para procesos auto-completados siempre es 0, para otros depende del estado
+                let mermaDisplay;
+                if (esProcesoAutoCompletado) {
+                    mermaDisplay = '0,00';
+                } else if (!isCompleted) {
+                    mermaDisplay = '-';
+                } else {
+                    mermaDisplay = ((item.merma_gr === null || item.merma_gr === undefined)
+                        ? '0,00'
+                        : parseFloat(item.merma_gr).toFixed(2).replace('.', ','));
+                }
+                const row = document.createElement('tr');
+
+                const photoCell = (pathJson, type) => {
+                    if (!pathJson) return '-';
+                    try {
+                        const paths = JSON.parse(pathJson);
+                        if (!Array.isArray(paths) || paths.length === 0) return '-';
+
+                        // Escapar las rutas para pasarlas como argumento de forma segura
+                        const safePaths = JSON.stringify(paths.map(p => fullPhotoUrl(p)));
+                        const safeTitle = `Galería de ${type} - Consecutivo ${item.consecutivo}`;
+
+                        return `<span class="photo-link" onclick='openPhotoModal(${safePaths}, "${safeTitle}")'>Ver Fotos (${paths.length})</span>`;
+                    } catch (e) {
+                        // Fallback para rutas antiguas que no son JSON
+                        return `<span class="photo-link" onclick='openPhotoModal(["${fullPhotoUrl(pathJson)}"], "Foto de ${type} - Consecutivo ${item.consecutivo}")'>Ver Foto</span>`;
+                    }
+                };
+
+                const consecStr = String(item.consecutivo).padStart(4, '0');
+                const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
+                const actionUrl = base.replace(/\/$/, '') + '/trazabilidad?mode=recibido&consecutivo=' + encodeURIComponent(consecStr);
+
+                // Construir acciones disponibles
+                let actions = [];
+
+                // Botón "Recibir" para procesos no completados y que NO sean auto-completados
+                if (!isCompleted && !esProcesoAutoCompletado) {
+                    actions.push(`<a href="${actionUrl}" class="btn-primary px-3 py-1 text-xs inline-block">Recibir</a>`);
+                }
+
+                // Botón "Editar" solo para administradores
+                if (isAdmin) {
+                    const editUrl = base.replace(/\/$/, '') + '/trazabilidad_edit?id=' + encodeURIComponent(item.consecutivo);
+                    actions.push(`<a href="${editUrl}" class="btn-primary px-3 py-1 text-xs inline-block" style="background-color: #2563eb !important;">Editar</a>`);
+                }
+
+                const actionCell = actions.length > 0 ? actions.join(' ') : '-';
+                let obsEntrega = (item.obs_entrega_pura || '').trim();
+                let obsRec = (item.obs_recibido_pura || '').trim();
+                if (!obsEntrega && !obsRec) {
+                    const raw = (item.observaciones_entrega || '').toString();
+                    raw.split(/\r?\n/).forEach(line => {
+                        const l = line.trim();
+                        if (/^ENTREGA:/i.test(l)) obsEntrega = l.replace(/^ENTREGA:\s*/i, '').trim();
+                        if (/^RECIBIDO:/i.test(l)) obsRec = l.replace(/^RECIBIDO:\s*/i, '').trim();
+                    });
+                }
+                const obsDisplay = `Entrega: ${obsEntrega || 'Sin observaciones'}${obsRec ? ' | Recibido: ' + obsRec : ''}`;
+
+                row.innerHTML = `
+                    <td>${consecStr}</td>
+                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                    <td>${formatDate(item.fecha_entrega)}</td>
+                    <td>${formatDate(item.fecha_recibido)}</td>
+                    <td>${item.proceso_nombre || '-'}</td>
+                    <td>${item.responsable_nombre || '-'}</td>
+                    <td>${item.producto_nombre || '-'}</td>
+                    <td>${parseFloat(item.peso_entregado_gr).toFixed(2).replace('.', ',')}</td>
+                    <td>${pesoLeyDisplay}</td>
+                    <td>${item.peso_recibido_gr !== null ? parseFloat(item.peso_recibido_gr).toFixed(2).replace('.', ',') : '-'}</td>
+                    <td>${mermaDisplay}</td>
+                    <td>${photoCell(item.foto_entrega_path, 'Entrega')}</td>
+                    <td>${photoCell(item.foto_recibido_path, 'Recibido')}</td>
+                    <td>${obsDisplay}</td>
+                    <td><span class="photo-link" onclick="openMaterialsModal('${consecStr}')">Ver</span></td>
+                    <td>${actionCell}</td>
+                `;
+                // Resaltar si corresponde
+                if (highlightParam && consecStr === highlightParam) {
+                    row.classList.add('row-highlight');
+                    highlightedRow = row;
+                }
+                trazabilidadBody.appendChild(row);
+            });
+
+            if (highlightedRow) {
+                setTimeout(() => {
+                    highlightedRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+            }
+        }
+
+        /**
+         * Carga los datos y prepara la paginación
+         */
+        async function loadTrazabilidadData() {
+            trazabilidadBody.innerHTML = '<tr><td colspan="15" class="text-center text-gray-500">Cargando datos...</td></tr>';
+            const result = await callApi(API_TRAZABILIDAD, 'GET');
+            if (result.success && result.data && result.data.length > 0) {
+                trazabilidadDataCache = result.data.slice();
+                filteredCache = trazabilidadDataCache;
+                // Calcular página que contiene el highlight si existe
+                const params = new URLSearchParams(window.location.search);
+                highlightParam = params.get('highlight');
+                if (highlightParam) {
+                    const idx = filteredCache.findIndex(it => String(it.consecutivo).padStart(4, '0') === highlightParam);
+                    if (idx >= 0) {
+                        page = Math.floor(idx / pageSize) + 1;
+                    } else {
+                        page = 1;
+                    }
+                } else {
+                    page = 1;
+                }
+                renderRows(filteredCache);
+            } else if (result.success) {
+                trazabilidadBody.innerHTML = '<tr><td colspan="15" class="text-center text-gray-500">No se encontraron registros de trazabilidad.</td></tr>';
+                document.getElementById('pager').style.display = 'none';
+            } else {
+                trazabilidadBody.innerHTML = `<tr><td colspan=\"15\" class=\"text-center text-red-600\">Error al cargar datos: ${result.message || 'Desconocido'}</td></tr>`;
+                showMessageModal('Error de Carga', result.message || 'No se pudo obtener el historial de trazabilidad.', 'error');
+            }
+        }
+
+        // --- INICIALIZACIÓN ---
+        // Utilidad: construir URL absoluta para fotos
+        function fullPhotoUrl(path) {
+            if (!path) return '';
+            const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
+            const trimmedBase = base.replace(/\/$/, '');
+            const normalized = path.startsWith('/') ? path : ('/' + path);
+            return trimmedBase + normalized;
+        }
+
+        // Exportar a XLSX usando SheetJS
+        // Exportar a XLSX usando SheetJS
+        function exportToXLSX() {
+            if (!trazabilidadDataCache || trazabilidadDataCache.length === 0) {
+                showMessageModal('Exportación', 'No hay datos para exportar.', 'info');
+                return;
+            }
+            if (typeof XLSX === 'undefined') {
+                showMessageModal('Exportación', 'No se pudo cargar el módulo de Excel. Verifique su conexión.', 'error');
+                return;
+            }
+            const headers = [
+                'CONSECUTIVO', 'ESTADO', 'FECHA_ENTREGA', 'FECHA_RECIBIDO', 'PROCESO', 'RESPONSABLE', 'PRODUCTO',
+                'PESO_ENT_GR', 'PESO_LEY_GR', 'PESO_REC_GR', 'MERMA_GR', 'SALDO', 'FOTO_ENT_URL', 'FOTO_REC_URL', 'OBS_ENTREGA', 'OBS_REC_IDO'
+            ];
+
+            const ws = XLSX.utils.aoa_to_sheet([headers]);
+
+            // Ordenar los datos para el cálculo de saldo acumulativo
+            const datosOrdenados = [...trazabilidadDataCache].sort((a, b) => parseInt(a.consecutivo) - parseInt(b.consecutivo));
+
+            datosOrdenados.forEach((item, index) => {
+                const rowIndex = index + 2; // +2 porque la data empieza en la fila 2 (1-based)
+
+                const procesoId = parseInt(item.proceso_id || 0);
+                const esProcesoAutoCompletado = [1, 2, 3, 4].includes(procesoId);
+                const isCompleted = item.fecha_recibido !== null || esProcesoAutoCompletado;
+                const estado = isCompleted ? 'COMPLETADO' : 'PENDIENTE';
+
+                const pesoEntregadoNum = Number(item.peso_entregado_gr) || 0;
+                const pesoRecibidoNum = (item.peso_recibido_gr !== null && item.peso_recibido_gr !== undefined) ? Number(item.peso_recibido_gr) : null;
+                const pesoLeyNum = (item.peso_ley_gr !== null && item.peso_ley_gr !== undefined) ? Number(item.peso_ley_gr) : 0;
+
+                let mermaNumerica;
+                if (esProcesoAutoCompletado) {
+                    mermaNumerica = 0;
+                } else {
+                    mermaNumerica = (item.merma_gr !== null && item.merma_gr !== undefined) ? Number(item.merma_gr) : 0;
+                }
+
+                // Fórmula para el saldo
+                const formulaSaldo = (rowIndex === 2)
+                    ? `H${rowIndex}-J${rowIndex}` // Saldo inicial (H es PESO_ENT_GR, J es PESO_REC_GR)
+                    : `L${rowIndex - 1}+H${rowIndex}-J${rowIndex}`; // Saldo acumulativo
+
+                let obsEnt = (item.obs_entrega_pura || '').trim();
+                let obsRec = (item.obs_recibido_pura || '').trim();
+                if (!obsEnt && !obsRec) {
+                    const raw = (item.observaciones_entrega || '').toString();
+                    raw.split(/\r?\n/).forEach(line => {
+                        const l = line.trim();
+                        if (/^ENTREGA:/i.test(l)) obsEnt = l.replace(/^ENTREGA:\s*/i, '').trim();
+                        if (/^RECIBIDO:/i.test(l)) obsRec = l.replace(/^RECIBIDO:\s*/i, '').trim();
+                    });
+                }
+
+                const rowData = [
+                    String(item.consecutivo).padStart(4, '0'),
+                    estado,
+                    item.fecha_entrega || '',
+                    item.fecha_recibido || '',
+                    item.proceso_nombre || '',
+                    item.responsable_nombre || '',
+                    item.producto_nombre || '',
+                    { t: 'n', v: pesoEntregadoNum, z: '#,##0.00' },
+                    { t: 'n', v: pesoLeyNum, z: '#,##0.00' },
+                    (pesoRecibidoNum !== null) ? { t: 'n', v: pesoRecibidoNum, z: '#,##0.00' } : null,
+                    { t: 'n', v: mermaNumerica, z: '#,##0.00' },
+                    { t: 'n', v: 0, f: formulaSaldo, z: '#,##0.00' }, // Celda con fórmula y formato
+                    fullPhotoUrl(item.foto_entrega_path),
+                    fullPhotoUrl(item.foto_recibido_path),
+                    obsEnt || 'Sin observaciones',
+                    obsRec || ''
+                ];
+
+                XLSX.utils.sheet_add_aoa(ws, [rowData], { origin: -1 });
+            });
+
+            // Ajustar ancho de columnas
+            ws['!cols'] = [
+                { wch: 12 }, { wch: 12 }, { wch: 20 }, { wch: 20 }, { wch: 15 },
+                { wch: 20 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
+                { wch: 12 }, { wch: 12 }, { wch: 30 }, { wch: 30 }, { wch: 40 }, { wch: 40 }
+            ];
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Trazabilidad');
+            const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const now = new Date();
+            const pad = n => String(n).padStart(2, '0');
+            const fileName = `trazabilidad_${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.xlsx`;
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function filterData(query) {
+            if (!query) {
+                filteredCache = trazabilidadDataCache;
+            } else {
+                const lowerCaseQuery = query.toLowerCase();
+                filteredCache = trazabilidadDataCache.filter(item => {
+                    return Object.values(item).some(val =>
+                        String(val).toLowerCase().includes(lowerCaseQuery)
+                    );
+                });
+            }
+            page = 1; // Reset page to 1 on new search
+            renderRows(filteredCache);
+        }
+
+        window.onload = function () {
+            loadTrazabilidadData();
+
+            // Listener para el campo de búsqueda
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    filterData(e.target.value);
+                });
+            }
+
+            // Listener de Logout
+            document.getElementById('logout-btn').addEventListener('click', async function (e) {
+                e.preventDefault();
+                const result = await callApi('logout', 'GET');
+                if (result.success) {
+                    const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
+                    window.location.href = base;
+                } else {
+                    showMessageModal('Error', 'No se pudo cerrar sesión.', 'error');
+                }
+            });
+
+            // Listener de Exportación
+            if (exportBtn) {
+                exportBtn.addEventListener('click', exportToXLSX);
+            }
+
+            // Habilitar/Deshabilitar exportación según disponibilidad de XLSX
+            const statusEl = document.getElementById('export-status');
+            if (typeof XLSX === 'undefined') {
+                exportBtn.disabled = true;
+                exportBtn.classList.add('opacity-60', 'cursor-not-allowed');
+                if (statusEl) statusEl.style.display = 'inline';
+            } else {
+                exportBtn.disabled = false;
+                exportBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+                if (statusEl) statusEl.style.display = 'none';
+            }
+
+            // Controles de paginación
+            const prevBtn = document.getElementById('prev-page');
+            const nextBtn = document.getElementById('next-page');
+            if (prevBtn && nextBtn) {
+                prevBtn.addEventListener('click', () => {
+                    if (page > 1) { page--; renderRows(filteredCache); }
+                });
+                nextBtn.addEventListener('click', () => {
+                    const totalPages = Math.max(1, Math.ceil((filteredCache?.length || 0) / pageSize));
+                    if (page < totalPages) { page++; renderRows(filteredCache); }
+                });
+            }
+        };
+
+        // --- Modal de fotos: abrir/cerrar ---
+        function openPhotoModal(photoUrls, title) {
+            modalTitle.textContent = title;
+            modalGallery.innerHTML = ''; // Limpiar galería anterior
+
+            if (Array.isArray(photoUrls) && photoUrls.length > 0) {
+                photoUrls.forEach(url => {
+                    const img = document.createElement('img');
+                    img.src = url;
+                    img.style.maxWidth = '100%';
+                    img.style.height = 'auto';
+                    img.style.marginBottom = '10px';
+                    img.onerror = () => {
+                        img.style.display = 'none';
+                        const errorText = document.createElement('p');
+                        errorText.textContent = `No se pudo cargar la imagen: ${url}`;
+                        modalGallery.appendChild(errorText);
+                    };
+                    modalGallery.appendChild(img);
+                });
+            } else {
+                modalGallery.textContent = 'No hay fotos para mostrar.';
+            }
+
+            photoModal.style.display = 'flex';
+        }
+
+        function closePhotoModal() {
+            photoModal.style.display = 'none';
+        }
+
+        window.onclick = function (event) {
+            if (event.target == photoModal) {
+                photoModal.style.display = 'none';
+            }
+        }
+
+        // Cerrar con ESC
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePhotoModal(); });
+
+        // --- Modal de materiales ---
+        const materialsModal = document.getElementById('materials-modal');
+        const materialsContent = document.getElementById('materials-content');
+        const materialsTitle = document.getElementById('materials-title');
+
+        async function openMaterialsModal(consecutivoStr) {
+            materialsTitle.textContent = `Materiales - Consecutivo ${consecutivoStr}`;
+            materialsContent.innerHTML = '<p class="text-gray-500">Cargando materiales...</p>';
+            materialsModal.style.display = 'flex';
+            try {
+                const result = await callApi(`trazabilidad/materiales/${parseInt(consecutivoStr,10)}`, 'GET');
+                if (result.success && result.data) {
+                    renderMaterialsContent(result.data);
+                } else {
+                    materialsContent.innerHTML = `<p class="text-red-600">${result.message || 'No fue posible obtener los materiales.'}</p>`;
+                }
+            } catch (e) {
+                materialsContent.innerHTML = `<p class="text-red-600">Error de conexión al cargar materiales.</p>`;
+            }
+        }
+
+        function renderMaterialsGroup(title, items) {
+            const section = document.createElement('section');
+            const h = document.createElement('h4');
+            h.className = 'text-lg font-semibold text-gray-700 mb-2';
+            h.textContent = title;
+            section.appendChild(h);
+            if (!items || items.length === 0) {
+                const p = document.createElement('p');
+                p.className = 'text-sm text-gray-500';
+                p.textContent = 'Sin registros.';
+                section.appendChild(p);
+                return section;
+            }
+            const grid = document.createElement('div');
+            grid.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4';
+            items.forEach(it => {
+                const card = document.createElement('div');
+                card.className = 'p-3 bg-gray-50 rounded border';
+                const name = document.createElement('div');
+                name.className = 'font-medium text-gray-800';
+                name.textContent = it.nombre || `Material #${it.material_id}`;
+                const peso = document.createElement('div');
+                const num = Number(it.peso || 0);
+                const displayPeso = Number.isFinite(num) ? num.toFixed(2).replace('.', ',') : '0,00';
+                peso.className = 'text-sm text-gray-600 mt-1';
+                peso.textContent = `Peso: ${displayPeso} gr`;
+                const photos = document.createElement('div');
+                photos.className = 'mt-2 grid grid-cols-3 gap-2';
+                const arr = Array.isArray(it.fotos) ? it.fotos : [];
+                if (arr.length === 0) {
+                    const p = document.createElement('p');
+                    p.className = 'text-xs text-gray-400';
+                    p.textContent = 'Sin fotos';
+                    photos.appendChild(p);
+                } else {
+                    arr.forEach(pth => {
+                        const img = document.createElement('img');
+                        img.src = fullPhotoUrl(pth);
+                        img.className = 'w-full h-20 object-cover rounded border';
+                        photos.appendChild(img);
+                    });
+                }
+                card.appendChild(name);
+                card.appendChild(peso);
+                card.appendChild(photos);
+                grid.appendChild(card);
+            });
+            section.appendChild(grid);
+            return section;
+        }
+
+        function renderMaterialsContent(data) {
+            materialsContent.innerHTML = '';
+            materialsContent.appendChild(renderMaterialsGroup('Entrega', data.entrega || []));
+            materialsContent.appendChild(renderMaterialsGroup('Recibido', data.recibido || []));
+        }
+
+        function closeMaterialsModal() {
+            materialsModal.style.display = 'none';
+        }
+
+        // Verificar permisos de administrador al cargar la página
+        (async () => {
+            try {
+                const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
+                const url = base.replace(/\/$/, '') + '/api/usuarios';
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    isAdmin = true;
+                    console.log('Usuario identificado como administrador');
+                } else {
+                    isAdmin = false;
+                    console.log('Usuario identificado como operario');
+                }
+            } catch (error) {
+                isAdmin = false;
+                console.log('Error verificando permisos, asumiendo operario:', error.message);
+            }
+        })();
+    </script>
+</body>
+
+</html>
