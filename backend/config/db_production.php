@@ -29,10 +29,45 @@ class Database {
 
         try {
             $this->connection = new PDO($dsn, $this->username, $this->password, $options);
+            $this->ensureTrazabilidadMaterialesTable();
         } catch (PDOException $e) {
             // En producción, no mostrar detalles del error por seguridad
             error_log("Error de conexión DB: " . $e->getMessage());
             die("Error de conexión a la base de datos. Contacte al administrador.");
+        }
+    }
+
+    /**
+     * Asegura la existencia de la tabla TrazabilidadMateriales.
+     */
+    private function ensureTrazabilidadMaterialesTable() {
+        try {
+            $stmt = $this->connection->prepare(
+                "SELECT 1 FROM information_schema.tables
+                 WHERE table_schema = ? AND LOWER(table_name) = 'trazabilidadmateriales'
+                 LIMIT 1"
+            );
+            $stmt->execute([$this->db_name]);
+            if ($stmt->fetch()) {
+                return;
+            }
+
+            $sql = "
+                CREATE TABLE IF NOT EXISTS TrazabilidadMateriales (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    consecutivo INT NOT NULL,
+                    material_id INT NOT NULL,
+                    movimiento ENUM('entrega','recibido') NOT NULL,
+                    peso DECIMAL(10,2) NULL,
+                    fotos_path TEXT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (material_id) REFERENCES Materiales(id),
+                    FOREIGN KEY (consecutivo) REFERENCES Trazabilidad(consecutivo)
+                ) ENGINE=InnoDB
+            ";
+            $this->connection->exec($sql);
+        } catch (PDOException $e) {
+            error_log("Error creando TrazabilidadMateriales: " . $e->getMessage());
         }
     }
 

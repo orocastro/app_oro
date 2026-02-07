@@ -28,9 +28,45 @@ class Database {
 
         try {
             $this->connection = new PDO($dsn, $this->username, $this->password, $options);
+            $this->ensureTrazabilidadMaterialesTable();
         } catch (PDOException $e) {
             // Detener la ejecución si hay un error fatal de conexión
             die("Error de conexión a la base de datos: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Asegura la existencia de la tabla TrazabilidadMateriales.
+     * Evita errores en instalaciones donde la BD se creó antes de este módulo.
+     */
+    private function ensureTrazabilidadMaterialesTable() {
+        try {
+            $stmt = $this->connection->prepare(
+                "SELECT 1 FROM information_schema.tables
+                 WHERE table_schema = ? AND LOWER(table_name) = 'trazabilidadmateriales'
+                 LIMIT 1"
+            );
+            $stmt->execute([$this->db_name]);
+            if ($stmt->fetch()) {
+                return;
+            }
+
+            $sql = "
+                CREATE TABLE IF NOT EXISTS TrazabilidadMateriales (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    consecutivo INT NOT NULL,
+                    material_id INT NOT NULL,
+                    movimiento ENUM('entrega','recibido') NOT NULL,
+                    peso DECIMAL(10,2) NULL,
+                    fotos_path TEXT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (material_id) REFERENCES Materiales(id),
+                    FOREIGN KEY (consecutivo) REFERENCES Trazabilidad(consecutivo)
+                ) ENGINE=InnoDB
+            ";
+            $this->connection->exec($sql);
+        } catch (PDOException $e) {
+            // Silencioso: no interrumpir la app si falla el auto-check
         }
     }
 

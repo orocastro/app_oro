@@ -607,10 +607,24 @@ class TrazabilidadController {
         $obs_recibido = !empty($_POST['obs_recibido']) ? 'RECIBIDO: ' . $_POST['obs_recibido'] : '';
         $observaciones_final = trim($obs_entrega . "\n" . $obs_recibido);
 
-        // Números y merma
+        // Números y merma (pueden ajustarse si llegan materiales)
         $peso_entregado = (float)str_replace(',', '.', $_POST['peso_entregado'] ?? '0');
         $peso_recibido_str = $_POST['peso_recibido'] ?? '';
         $peso_recibido = ($peso_recibido_str !== '') ? (float)str_replace(',', '.', $peso_recibido_str) : null;
+
+        // Materiales (opcional en edición)
+        $materialesEntrega = $this->decodeMaterialesJson($_POST['materiales_entrega_json'] ?? '');
+        $materialesRecibido = $this->decodeMaterialesJson($_POST['materiales_recibido_json'] ?? '');
+        $hasMatEntrega = !empty($materialesEntrega);
+        $hasMatRecibido = !empty($materialesRecibido);
+
+        if ($hasMatEntrega) {
+            $peso_entregado = $this->sumMaterialesPeso($materialesEntrega);
+        }
+        if ($hasMatRecibido) {
+            $peso_recibido = $this->sumMaterialesPeso($materialesRecibido);
+        }
+
         $merma = ($peso_recibido !== null) ? round($peso_entregado - $peso_recibido, 2) : null;
 
         // Recalcular peso_ley según reglas de proceso
@@ -650,6 +664,14 @@ class TrazabilidadController {
             ];
 
             $stmt->execute($params);
+
+            // Guardar materiales editados (si se enviaron)
+            if ($hasMatEntrega) {
+                $this->saveMaterialesForUpdate($consecutivo, 'entrega', $materialesEntrega, 'material_fotos_entrega_');
+            }
+            if ($hasMatRecibido) {
+                $this->saveMaterialesForUpdate($consecutivo, 'recibido', $materialesRecibido, 'material_fotos_recibido_');
+            }
 
             http_response_code(200);
             echo json_encode(['success' => true, 'message' => 'Registro actualizado con éxito.']);
@@ -697,6 +719,77 @@ class TrazabilidadController {
         } catch (PDOException $e) {
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Error al obtener materiales: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Decodifica JSON de materiales para edición.
+     */
+    private function decodeMaterialesJson($json) {
+        if (!$json) return [];
+        $data = json_decode($json, true);
+        return is_array($data) ? $data : [];
+    }
+
+    /**
+     * Suma pesos de materiales (redondeado a 2 decimales).
+     */
+    private function sumMaterialesPeso($items) {
+        $sum = 0.0;
+        foreach ($items as $it) {
+            $raw = $it['peso'] ?? 0;
+            $num = (float)str_replace(',', '.', (string)$raw);
+            $sum += $num;
+        }
+        return round($sum, 2);
+    }
+
+    /**
+     * Guarda materiales editados (upsert + manejo de fotos).
+     */
+    private function saveMaterialesForUpdate($consecutivo, $movimiento, $items, $fileKeyPrefix) {
+        if (!in_array($movimiento, ['entrega', 'recibido'], true)) {
+            return;
+        }
+
+        foreach ($items as $it) {
+            $mid = (int)($it['material_id'] ?? 0);
+            if ($mid <= 0) continue;
+
+            $rawPeso = $it['peso'] ?? 0;
+            $peso = (float)str_replace(',', '.', (string)$rawPeso);
+
+            $existing = $it['existing_fotos'] ?? ($it['fotos'] ?? []);
+            if (!is_array($existing)) $existing = [];
+            $existing = array_values(array_filter($existing, 'is_string'));
+
+            // Subir nuevas fotos si existen
+            $newJson = $this->uploadMultipleFiles($consecutivo, $fileKeyPrefix . $mid);
+            $newArr = [];
+            if (is_string($newJson)) {
+                $tmp = json_decode($newJson, true);
+                if (is_array($tmp)) $newArr = $tmp;
+            }
+
+            $photos = array_values(array_merge($existing, $newArr));
+            $hasData = ($peso > 0) || !empty($photos);
+
+            if (!$hasData) {
+                $del = $this->db->prepare("DELETE FROM TrazabilidadMateriales WHERE consecutivo = ? AND material_id = ? AND movimiento = ?");
+                $del->execute([$consecutivo, $mid, $movimiento]);
+                continue;
+            }
+
+            // Upsert manual
+            $chk = $this->db->prepare("SELECT id FROM TrazabilidadMateriales WHERE consecutivo = ? AND material_id = ? AND movimiento = ? LIMIT 1");
+            $chk->execute([$consecutivo, $mid, $movimiento]);
+            if ($chk->fetch()) {
+                $upd = $this->db->prepare("UPDATE TrazabilidadMateriales SET peso = ?, fotos_path = ? WHERE consecutivo = ? AND material_id = ? AND movimiento = ?");
+                $upd->execute([$peso, json_encode($photos), $consecutivo, $mid, $movimiento]);
+            } else {
+                $ins = $this->db->prepare("INSERT INTO TrazabilidadMateriales (consecutivo, material_id, movimiento, peso, fotos_path) VALUES (?, ?, ?, ?, ?)");
+                $ins->execute([$consecutivo, $mid, $movimiento, $peso, json_encode($photos)]);
+            }
         }
     }
 }

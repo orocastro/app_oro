@@ -441,6 +441,10 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
         let matWeightsRecibido = {}; // {materialId: peso}
         let matFilesEntrega = {};   // {materialId: File[]}
         let matFilesRecibido = {};  // {materialId: File[]}
+        let matExistingFotosEntrega = {}; // {materialId: string[]}
+        let matExistingFotosRecibido = {}; // {materialId: string[]}
+        let matInputsEntrega = {}; // {materialId: input}
+        let matInputsRecibido = {}; // {materialId: input}
 
         // --- FUNCIONES DE UTILIDAD ---
         async function loadDropdown(endpoint, selectId, placeholder = "Seleccionar...") {
@@ -470,6 +474,25 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
                 materialesCatalog = r.data;
             } else {
                 materialesCatalog = [];
+            }
+        }
+
+        function setMaterialesStateFromDB(modo, items) {
+            const isEntrega = modo === 'entrega';
+            const weightsMap = isEntrega ? matWeightsEntrega : matWeightsRecibido;
+            const existingMap = isEntrega ? matExistingFotosEntrega : matExistingFotosRecibido;
+            // Resetear estado
+            Object.keys(weightsMap).forEach(k => { delete weightsMap[k]; });
+            Object.keys(existingMap).forEach(k => { delete existingMap[k]; });
+
+            if (Array.isArray(items)) {
+                items.forEach(it => {
+                    const id = it.material_id;
+                    if (!id) return;
+                    const num = Number(it.peso || 0);
+                    weightsMap[id] = Number.isFinite(num) ? num : 0;
+                    existingMap[id] = Array.isArray(it.fotos) ? it.fotos : [];
+                });
             }
         }
 
@@ -634,6 +657,11 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
             const grid = document.createElement('div');
             grid.className = 'grid grid-cols-1 sm:grid-cols-2 gap-4';
 
+            const inputsMap = isEntrega ? matInputsEntrega : matInputsRecibido;
+            Object.keys(inputsMap).forEach(k => { delete inputsMap[k]; });
+            const weightsMap = isEntrega ? matWeightsEntrega : matWeightsRecibido;
+            const existingFotosMap = isEntrega ? matExistingFotosEntrega : matExistingFotosRecibido;
+
             materialesCatalog.forEach(mat => {
                 const matId = mat.id;
                 const card = document.createElement('div');
@@ -646,7 +674,14 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
                 input.inputMode = 'decimal';
                 input.placeholder = 'Peso (gr)';
                 input.className = 'w-full mt-2';
-                input.value = '';
+                const currentWeight = weightsMap[matId];
+                if (currentWeight !== undefined && currentWeight !== null && currentWeight !== '') {
+                    const num = Number(currentWeight);
+                    input.value = Number.isFinite(num) ? num.toFixed(2) : String(currentWeight);
+                } else {
+                    input.value = '';
+                }
+                inputsMap[matId] = input;
                 input.addEventListener('input', () => {
                     const val = String(input.value).replace(',', '.');
                     const num = Number(val);
@@ -686,7 +721,8 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
                     if (fileInput.files && fileInput.files.length > 0) {
                         Array.from(fileInput.files).forEach(f => store.push(f));
                     }
-                    renderMaterialPreview(preview, store);
+                    const existing = existingFotosMap[matId] || [];
+                    renderMaterialPreview(preview, existing, store);
                     fileInput.value = '';
                 });
 
@@ -697,6 +733,9 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
                 card.appendChild(label);
                 card.appendChild(input);
                 card.appendChild(rowBtns);
+                const existing = existingFotosMap[matId] || [];
+                const store = isEntrega ? (matFilesEntrega[matId] ||= []) : (matFilesRecibido[matId] ||= []);
+                renderMaterialPreview(preview, existing, store);
                 card.appendChild(preview);
                 grid.appendChild(card);
             });
@@ -704,9 +743,27 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
             container.appendChild(grid);
         }
 
-        function renderMaterialPreview(container, files) {
+        function renderMaterialPreview(container, existingPhotos, files) {
             container.innerHTML = '';
-            files.forEach((file, idx) => {
+            const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
+            const buildUrl = (path) => {
+                if (!path) return '';
+                const trimmed = base.replace(/\/$/, '');
+                const normalized = path.startsWith('/') ? path : ('/' + path);
+                return trimmed + normalized;
+            };
+
+            (existingPhotos || []).forEach((path) => {
+                const wrap = document.createElement('div');
+                wrap.className = 'relative';
+                const img = document.createElement('img');
+                img.src = buildUrl(path);
+                img.className = 'w-full h-20 object-cover rounded border';
+                wrap.appendChild(img);
+                container.appendChild(wrap);
+            });
+
+            (files || []).forEach((file, idx) => {
                 const wrap = document.createElement('div');
                 wrap.className = 'relative';
                 const img = document.createElement('img');
@@ -717,7 +774,7 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
                 rm.type = 'button';
                 rm.className = 'absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs';
                 rm.innerHTML = '&times;';
-                rm.onclick = (e) => { e.stopPropagation(); files.splice(idx,1); renderMaterialPreview(container, files); };
+                rm.onclick = (e) => { e.stopPropagation(); files.splice(idx,1); renderMaterialPreview(container, existingPhotos, files); };
                 wrap.appendChild(img); wrap.appendChild(rm); container.appendChild(wrap);
             });
         }
@@ -820,6 +877,23 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
                 pesoGrInput.focus();
                 const pId = parseInt(data.proceso_id, 10);
                 mermaGrInput.value = ([1, 2, 3, 4].includes(pId)) ? 'NULL' : '0,00';
+
+                // Cargar materiales asociados para prellenar en RECIBIDO
+                try {
+                    const mats = await callApi(`trazabilidad/materiales/${consecutivo}`, 'GET');
+                    if (mats.success && mats.data) {
+                        const entregaList = mats.data.entrega || [];
+                        const recibidoList = mats.data.recibido || [];
+                        const prefList = (recibidoList.length > 0) ? recibidoList : entregaList;
+                        // reset de archivos nuevos y estado previo
+                        matFilesRecibido = {};
+                        setMaterialesStateFromDB('recibido', prefList);
+                        renderMaterialesUI('recibido');
+                        updateTotalesDesdeMateriales();
+                    }
+                } catch (e) {
+                    console.warn('No se pudieron cargar materiales del consecutivo:', e);
+                }
             } else {
                 trazabilidadInfo.textContent = result.message || 'Error desconocido en la búsqueda.';
                 trazabilidadInfo.classList.remove('hidden');

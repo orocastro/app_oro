@@ -1,0 +1,10 @@
+# Logs
+/logs/*.log
+
+# Uploads (keep placeholder)
+/frontend/assets/img/**
+!/frontend/assets/img/.gitkeep
+
+# OS files
+.DS_Store
+Thumbs.db
