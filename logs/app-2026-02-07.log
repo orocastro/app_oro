@@ -207,3 +207,5 @@
 [2026-02-07 20:36:41] INFO HTTP Request {"method":"GET","uri":"api\/trazabilidad\/materiales\/25"}
 [2026-02-07 20:36:47] INFO HTTP Request {"method":"GET","uri":"home"}
 [2026-02-07 20:36:47] INFO HTTP Request {"method":"GET","uri":"api\/usuarios"}
+[2026-02-07 21:27:44] INFO HTTP Request {"method":"GET","uri":"api\/logout"}
+[2026-02-07 21:27:45] INFO HTTP Request {"method":"GET","uri":""}

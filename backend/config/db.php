@@ -10,9 +10,9 @@ class Database {
 
     // Configuración de la base de datos (debe ser modificada en un entorno real)
     private $host = 'localhost';
-    private $db_name = 'trazabilidad_db'; // Nombre de la DB u942127396_massi_bd
-    private $username = 'root';          // Usuario de la DB u942127396_massi_user
-    private $password = '';              // Contraseña de la DB g582UKXE1A!
+    private $db_name = 'u942127396_massi_bd'; // Nombre de la DB
+    private $username = 'u942127396_massi_user';          // Usuario de la DB
+    private $password = 'g582UKXE1A!';              // Contraseña de la DB
 
     /**
      * Constructor privado para prevenir la instanciación directa.
@@ -30,14 +30,14 @@ class Database {
             $this->connection = new PDO($dsn, $this->username, $this->password, $options);
             $this->ensureTrazabilidadMaterialesTable();
         } catch (PDOException $e) {
-            // Detener la ejecución si hay un error fatal de conexión
-            die("Error de conexión a la base de datos: " . $e->getMessage());
+            // En producción, no mostrar detalles del error por seguridad
+            error_log("Error de conexión DB: " . $e->getMessage());
+            die("Error de conexión a la base de datos. Contacte al administrador.");
         }
     }
 
     /**
      * Asegura la existencia de la tabla TrazabilidadMateriales.
-     * Evita errores en instalaciones donde la BD se creó antes de este módulo.
      */
     private function ensureTrazabilidadMaterialesTable() {
         try {
@@ -66,7 +66,7 @@ class Database {
             ";
             $this->connection->exec($sql);
         } catch (PDOException $e) {
-            // Silencioso: no interrumpir la app si falla el auto-check
+            error_log("Error creando TrazabilidadMateriales: " . $e->getMessage());
         }
     }
 

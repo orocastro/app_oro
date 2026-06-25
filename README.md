@@ -8,13 +8,12 @@ El diseño del frontend se basa en las plantillas proporcionadas, utilizando un 
 
 ## **2. Arquitectura y Stack Tecnológico**
 
-```text
 | Componente        | Tecnología                                     | Descripción                                                                                 |
 | ----------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | **Frontend**      | HTML5, CSS (Tailwind CSS classes), JavaScript. | Interfaz de usuario, formularios CRUD, lógica de cálculo de merma y llamadas a la API.      |
 | **Backend**       | PHP puro (>= 7.4), PDO.                        | Lógica de negocio, controladores RESTful, manejo de sesiones y gestión de archivos (fotos). |
 | **Base de Datos** | MySQL.                                         | Almacenamiento de datos de catálogos y registros de trazabilidad.                           |
-```
+
 
 ## **3. Estructura de Directorios**
 

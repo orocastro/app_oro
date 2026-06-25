@@ -1,6 +1,6 @@
 <?php
 /**
- * Clase Database para PRODUCCIÓN en Hostinger
+ * Clase Database
  * Maneja la conexión a la base de datos MySQL usando PDO.
  * Usa el patrón Singleton para asegurar una única conexión.
  */
@@ -8,12 +8,11 @@ class Database {
     private static $instance = null;
     private $connection;
 
-    // Configuración de la base de datos para HOSTINGER
-    // ⚠️ IMPORTANTE: Reemplaza estos valores con los datos reales de tu hosting
-    private $host = 'localhost';           // Normalmente 'localhost' en Hostinger
-    private $db_name = 'u123456789_trazabilidad'; // Nombre de tu base de datos en Hostinger
-    private $username = 'u123456789_user';         // Tu usuario de base de datos
-    private $password = 'g582UKXE1A!';      // Tu contraseña de base de datos
+    // Configuración de la base de datos (debe ser modificada en un entorno real)
+    private $host = 'localhost';
+    private $db_name = 'trazabilidad_db'; // Nombre de la DB u942127396_massi_bd
+    private $username = 'root';          // Usuario de la DB u942127396_massi_user
+    private $password = '';              // Contraseña de la DB g582UKXE1A!
 
     /**
      * Constructor privado para prevenir la instanciación directa.
@@ -31,14 +30,14 @@ class Database {
             $this->connection = new PDO($dsn, $this->username, $this->password, $options);
             $this->ensureTrazabilidadMaterialesTable();
         } catch (PDOException $e) {
-            // En producción, no mostrar detalles del error por seguridad
-            error_log("Error de conexión DB: " . $e->getMessage());
-            die("Error de conexión a la base de datos. Contacte al administrador.");
+            // Detener la ejecución si hay un error fatal de conexión
+            die("Error de conexión a la base de datos: " . $e->getMessage());
         }
     }
 
     /**
      * Asegura la existencia de la tabla TrazabilidadMateriales.
+     * Evita errores en instalaciones donde la BD se creó antes de este módulo.
      */
     private function ensureTrazabilidadMaterialesTable() {
         try {
@@ -67,7 +66,7 @@ class Database {
             ";
             $this->connection->exec($sql);
         } catch (PDOException $e) {
-            error_log("Error creando TrazabilidadMateriales: " . $e->getMessage());
+            // Silencioso: no interrumpir la app si falla el auto-check
         }
     }
 
