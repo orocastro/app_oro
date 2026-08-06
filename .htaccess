@@ -1,16 +1,19 @@
 # Activar el motor de reescritura de Apache
 RewriteEngine On
 
+# Forzar UTF-8 en todas las respuestas
+AddDefaultCharset UTF-8
+
 # Establecer la base de la URL para el proyecto
 RewriteBase /app_oro/
 
-# Especificar el archivo de índice del directorio
+# Especificar el archivo de indice del directorio
 DirectoryIndex index.php
 
-# Condición: Si el archivo o directorio solicitado NO existe...
+# Condicion: Si el archivo o directorio solicitado NO existe...
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
 # ...entonces, redirigir la solicitud a index.php
-# Pasamos la URL original en el parámetro 'uri' para que tu Router la procese
+# Pasamos la URL original en el parametro 'uri' para que tu Router la procese
 RewriteRule ^(.*)$ index.php?uri=$1 [QSA,L]

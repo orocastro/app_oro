@@ -38,8 +38,8 @@ if (strpos($request_uri, 'frontend/assets/') === 0) {
     if (file_exists($static_path) && is_file($static_path)) {
         $ext = strtolower(pathinfo($static_path, PATHINFO_EXTENSION));
         switch ($ext) {
-            case 'css': header('Content-Type: text/css'); break;
-            case 'js': header('Content-Type: application/javascript'); break;
+            case 'css': header('Content-Type: text/css; charset=utf-8'); break;
+            case 'js': header('Content-Type: application/javascript; charset=utf-8'); break;
             case 'png': header('Content-Type: image/png'); break;
             case 'jpg':
             case 'jpeg': header('Content-Type: image/jpeg'); break;
@@ -119,25 +119,29 @@ if (strpos($request_uri, 'api/') === 0) {
     $router->put('usuarios', 'UsuarioController@update');
     $router->delete('usuarios', 'UsuarioController@delete');
 
-    // Paso 9/10/11: Lógica de Trazabilidad
-    require_once __DIR__ . '/backend/controllers/TrazabilidadController.php'; 
-    $router->get('trazabilidad', 'TrazabilidadController@index'); // Nueva ruta de listado
+    // Paso 9/10/11: Lógica de Trazabilidad (Fase 2: Ordenes + Movimientos)
+    require_once __DIR__ . '/backend/controllers/TrazabilidadController.php';
+
+    // --- Nuevas rutas de Ordenes ---
+    $router->get('ordenes', 'TrazabilidadController@index');
+    $router->post('ordenes', 'TrazabilidadController@createOrden');
+    $router->get('ordenes/{consecutivo}/movimientos', 'TrazabilidadController@getMovimientosByConsecutivo');
+    $router->get('ordenes/{consecutivo}', 'TrazabilidadController@getByConsecutivo');
+    $router->post('movimientos', 'TrazabilidadController@registerMovimiento');
+
+    // --- Rutas legacy (compatibilidad hacia atrás) ---
+    // La ruta estática 'trazabilidad' debe ir ANTES de la dinámica 'trazabilidad/{consecutivo}'
+    $router->get('trazabilidad', 'TrazabilidadController@index');
     $router->get('trazabilidad/consecutivo', 'TrazabilidadController@getNextConsecutivo');
-    // Ruta con parámetro: /api/trazabilidad/123
-    $router->get('trazabilidad/{consecutivo}', 'TrazabilidadController@getByConsecutivo'); 
-    
-    // Ruta específica para obtener datos para edición (solo admin)
+    // Rutas dinámicas específicas DEBEN ir antes de rutas dinámicas genéricas para evitar capturas erróneas
     $router->get('trazabilidad/edit/{consecutivo}', 'TrazabilidadController@getForEdit');
-    // Materiales ligados a un consecutivo
     $router->get('trazabilidad/materiales/{consecutivo}', 'TrazabilidadController@getMaterialsByConsecutivo');
-    
-    // Rutas POST añadidas en el Paso 10
-    $router->post('trazabilidad/entrega', 'TrazabilidadController@registerEntrega');
-    $router->post('trazabilidad/recibido', 'TrazabilidadController@registerRecibido');
-    // Ruta POST para actualizar (edición con archivos)
+    // Legacy: búsqueda por consecutivo -> ahora devuelve orden completa
+    $router->get('trazabilidad/{consecutivo}', 'TrazabilidadController@getByConsecutivo');
+    // Legacy POST: redirigen internamente a los nuevos métodos
+    $router->post('trazabilidad/entrega', 'TrazabilidadController@createOrden');
+    $router->post('trazabilidad/recibido', 'TrazabilidadController@registerMovimiento');
     $router->post('trazabilidad/update', 'TrazabilidadController@update');
-    
-    // Ruta PUT para editar registros de trazabilidad (solo admin)
     $router->put('trazabilidad/{id}', 'TrazabilidadController@update');
 
 
@@ -186,6 +190,7 @@ $full_path = __DIR__ . '/frontend/' . $view_file;
 if (file_exists($full_path)) {
     // Si es una vista, necesitamos $base_url para los assets (ya calculado dinámicamente)
     // Inyección de variables JS mínimas para debug y base URL
+        header('Content-Type: text/html; charset=utf-8');
     echo "<script>window.APP_DEBUG=" . (APP_DEBUG ? 'true' : 'false') . ";window.BASE_URL='" . htmlspecialchars($base_url, ENT_QUOTES) . "';</script>";
     include $full_path;
     exit();

@@ -30,7 +30,7 @@ class ProductoController {
             $productos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             http_response_code(200);
-            echo json_encode(['success' => true, 'data' => $productos]);
+            echo json_encode(['success' => true, 'data' => $productos], JSON_UNESCAPED_UNICODE);
         } catch (PDOException $e) {
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => "Error al obtener productos: " . $e->getMessage()]);
@@ -46,7 +46,7 @@ class ProductoController {
 
         if (empty($nombre)) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'El nombre del producto es obligatorio.']);
+            echo json_encode(['success' => false, 'message' => 'El nombre del producto es obligatorio.'], JSON_UNESCAPED_UNICODE);
             return;
         }
 
@@ -56,12 +56,12 @@ class ProductoController {
 
             $new_id = $this->db->lastInsertId();
             http_response_code(201); // Created
-            echo json_encode(['success' => true, 'message' => 'Producto creado exitosamente.', 'id' => $new_id, 'nombre' => $nombre]);
+            echo json_encode(['success' => true, 'message' => 'Producto creado exitosamente.', 'id' => $new_id, 'nombre' => $nombre], JSON_UNESCAPED_UNICODE);
         } catch (PDOException $e) {
             // Error 23000 es usualmente una violación de restricción única (nombre duplicado)
             if ($e->getCode() == '23000') {
                 http_response_code(409); // Conflict
-                echo json_encode(['success' => false, 'message' => 'El nombre del producto ya existe.']);
+                echo json_encode(['success' => false, 'message' => 'El nombre del producto ya existe.'], JSON_UNESCAPED_UNICODE);
             } else {
                 http_response_code(500);
                 echo json_encode(['success' => false, 'message' => "Error al crear producto: " . $e->getMessage()]);
@@ -79,7 +79,7 @@ class ProductoController {
 
         if (empty($id) || empty($nombre)) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'ID y nombre son obligatorios para actualizar.']);
+            echo json_encode(['success' => false, 'message' => 'ID y nombre son obligatorios para actualizar.'], JSON_UNESCAPED_UNICODE);
             return;
         }
 
@@ -89,7 +89,7 @@ class ProductoController {
             $chk->execute([$id]);
             if ($chk->fetch()) {
                 http_response_code(403);
-                echo json_encode(['success' => false, 'message' => 'No se puede editar: el producto está asociado a trazabilidad.']);
+                echo json_encode(['success' => false, 'message' => 'No se puede editar: el producto está asociado a trazabilidad.'], JSON_UNESCAPED_UNICODE);
                 return;
             }
         } catch (PDOException $e) {}
@@ -100,16 +100,16 @@ class ProductoController {
 
             if ($stmt->rowCount() == 0) {
                 http_response_code(404);
-                echo json_encode(['success' => false, 'message' => 'Producto no encontrado o no se realizaron cambios.']);
+                echo json_encode(['success' => false, 'message' => 'Producto no encontrado o no se realizaron cambios.'], JSON_UNESCAPED_UNICODE);
                 return;
             }
 
             http_response_code(200);
-            echo json_encode(['success' => true, 'message' => 'Producto actualizado exitosamente.']);
+            echo json_encode(['success' => true, 'message' => 'Producto actualizado exitosamente.'], JSON_UNESCAPED_UNICODE);
         } catch (PDOException $e) {
             if ($e->getCode() == '23000') {
                 http_response_code(409); // Conflict
-                echo json_encode(['success' => false, 'message' => 'El nombre del producto ya existe.']);
+                echo json_encode(['success' => false, 'message' => 'El nombre del producto ya existe.'], JSON_UNESCAPED_UNICODE);
             } else {
                 http_response_code(500);
                 echo json_encode(['success' => false, 'message' => "Error al actualizar producto: " . $e->getMessage()]);
@@ -131,7 +131,7 @@ class ProductoController {
 
         if (empty($id)) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'El ID del producto es obligatorio para eliminar.']);
+            echo json_encode(['success' => false, 'message' => 'El ID del producto es obligatorio para eliminar.'], JSON_UNESCAPED_UNICODE);
             return;
         }
 
@@ -141,7 +141,7 @@ class ProductoController {
             $chk->execute([$id]);
             if ($chk->fetch()) {
                 http_response_code(409);
-                echo json_encode(['success' => false, 'message' => 'No se puede eliminar: el producto está asociado a trazabilidad.']);
+                echo json_encode(['success' => false, 'message' => 'No se puede eliminar: el producto está asociado a trazabilidad.'], JSON_UNESCAPED_UNICODE);
                 return;
             }
         } catch (PDOException $e) {}
@@ -152,16 +152,16 @@ class ProductoController {
 
             if ($stmt->rowCount() > 0) {
                 http_response_code(200);
-                echo json_encode(['success' => true, 'message' => 'Producto eliminado exitosamente.']);
+                echo json_encode(['success' => true, 'message' => 'Producto eliminado exitosamente.'], JSON_UNESCAPED_UNICODE);
             } else {
                 http_response_code(404);
-                echo json_encode(['success' => false, 'message' => 'Producto no encontrado.']);
+                echo json_encode(['success' => false, 'message' => 'Producto no encontrado.'], JSON_UNESCAPED_UNICODE);
             }
         } catch (PDOException $e) {
             // Error 23000 es usualmente una violación de clave foránea (el producto está en uso)
             if ($e->getCode() == '23000') {
                  http_response_code(409); // Conflict
-                 echo json_encode(['success' => false, 'message' => 'No se puede eliminar: El producto está asociado a un registro de trazabilidad.']);
+                 echo json_encode(['success' => false, 'message' => 'No se puede eliminar: El producto está asociado a un registro de trazabilidad.'], JSON_UNESCAPED_UNICODE);
             } else {
                 http_response_code(500);
                 echo json_encode(['success' => false, 'message' => "Error al eliminar producto: " . $e->getMessage()]);

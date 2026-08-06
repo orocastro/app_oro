@@ -65,3 +65,21 @@ function formatDateTime(date) {
 
 // Exponer base_url global mínima para compatibilidad con vistas que la leen
 window.base_url = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
+
+// Botón "Regresar" global: usa el historial del navegador y si no hay, va al href del botón (home)
+document.addEventListener('click', function (e) {
+    const btn = e.target.closest('.btn-back');
+    if (!btn) return;
+    e.preventDefault();
+    let sameOriginRef = false;
+    try {
+        sameOriginRef = document.referrer && new URL(document.referrer).origin === window.location.origin;
+    } catch (err) {
+        sameOriginRef = false;
+    }
+    if (window.history.length > 1 && sameOriginRef) {
+        window.history.back();
+    } else {
+        window.location.href = btn.getAttribute('href');
+    }
+});

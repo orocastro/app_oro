@@ -51,7 +51,7 @@ class AuthController {
         if (empty($usuario) || empty($clave)) {
             if (class_exists('Logger')) { Logger::warn('Login missing fields', ['usuario' => $usuario]); }
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'Usuario y clave son obligatorios.']);
+            echo json_encode(['success' => false, 'message' => 'Usuario y clave son obligatorios.'], JSON_UNESCAPED_UNICODE);
             return;
         }
 
@@ -74,11 +74,11 @@ class AuthController {
 
                 if (class_exists('Logger')) { Logger::info('Login success', ['usuario' => $usuario, 'user_id' => $user['id']]); }
                 http_response_code(200);
-                echo json_encode(['success' => true, 'message' => 'Login exitoso.', 'user' => ['id' => $user['id'], 'nombre' => $user['nombre'], 'rol' => ($user['rol'] ?? 'operador')]]);
+                echo json_encode(['success' => true, 'message' => 'Login exitoso.', 'user' => ['id' => $user['id'], 'nombre' => $user['nombre'], 'rol' => ($user['rol'] ?? 'operador')]], JSON_UNESCAPED_UNICODE);
             } else {
                 if (class_exists('Logger')) { Logger::warn('Login failed', ['usuario' => $usuario]); }
                 http_response_code(401); // Unauthorized
-                echo json_encode(['success' => false, 'message' => 'Usuario o clave incorrectos.']);
+                echo json_encode(['success' => false, 'message' => 'Usuario o clave incorrectos.'], JSON_UNESCAPED_UNICODE);
             }
         } catch (PDOException $e) {
             if (class_exists('Logger')) { Logger::error('Login DB error', ['usuario' => $usuario, 'error' => $e->getMessage()]); }
@@ -96,7 +96,7 @@ class AuthController {
 
         if (empty($usuario)) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'El correo de usuario es obligatorio para la recuperación.']);
+            echo json_encode(['success' => false, 'message' => 'El correo de usuario es obligatorio para la recuperación.'], JSON_UNESCAPED_UNICODE);
             return;
         }
 
@@ -120,14 +120,14 @@ class AuthController {
                     'success' => true, 
                     'message' => 'Si el usuario existe, se ha enviado un enlace de recuperación al correo.',
                     'debug' => "Usuario encontrado: " . $user['nombre']
-                ]);
+                ], JSON_UNESCAPED_UNICODE);
             } else {
                 // Siempre devolver éxito para evitar dar pistas sobre la existencia de usuarios
                 http_response_code(200); 
                 echo json_encode([
                     'success' => true, 
                     'message' => 'Si el usuario existe, se ha enviado un enlace de recuperación al correo.',
-                ]);
+                ], JSON_UNESCAPED_UNICODE);
             }
         } catch (PDOException $e) {
             http_response_code(500);
@@ -141,7 +141,7 @@ class AuthController {
     public function logout($data) {
         SessionManager::destroy();
         http_response_code(200);
-        echo json_encode(['success' => true, 'message' => 'Sesión cerrada exitosamente.']);
+        echo json_encode(['success' => true, 'message' => 'Sesión cerrada exitosamente.'], JSON_UNESCAPED_UNICODE);
     }
 
     /**
@@ -152,7 +152,7 @@ class AuthController {
         $userId = (int)(SessionManager::get('user_id') ?? 0);
         if ($userId <= 0) {
             http_response_code(401);
-            echo json_encode(['success' => false, 'message' => 'No autenticado.']);
+            echo json_encode(['success' => false, 'message' => 'No autenticado.'], JSON_UNESCAPED_UNICODE);
             return;
         }
 
@@ -162,17 +162,17 @@ class AuthController {
 
         if ($current === '' || $new === '' || $confirm === '') {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'Todos los campos son obligatorios.']);
+            echo json_encode(['success' => false, 'message' => 'Todos los campos son obligatorios.'], JSON_UNESCAPED_UNICODE);
             return;
         }
         if (strlen($new) < 8) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'La nueva contraseña debe tener al menos 8 caracteres.']);
+            echo json_encode(['success' => false, 'message' => 'La nueva contraseña debe tener al menos 8 caracteres.'], JSON_UNESCAPED_UNICODE);
             return;
         }
         if ($new !== $confirm) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'La confirmación no coincide.']);
+            echo json_encode(['success' => false, 'message' => 'La confirmación no coincide.'], JSON_UNESCAPED_UNICODE);
             return;
         }
 
@@ -182,7 +182,7 @@ class AuthController {
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$row || !password_verify($current, $row['clave'])) {
                 http_response_code(400);
-                echo json_encode(['success' => false, 'message' => 'La contraseña actual es incorrecta.']);
+                echo json_encode(['success' => false, 'message' => 'La contraseña actual es incorrecta.'], JSON_UNESCAPED_UNICODE);
                 return;
             }
 
@@ -191,10 +191,10 @@ class AuthController {
             $ok = $upd->execute([$hash, $userId]);
             if ($ok) {
                 http_response_code(200);
-                echo json_encode(['success' => true, 'message' => 'Contraseña actualizada correctamente.']);
+                echo json_encode(['success' => true, 'message' => 'Contraseña actualizada correctamente.'], JSON_UNESCAPED_UNICODE);
             } else {
                 http_response_code(500);
-                echo json_encode(['success' => false, 'message' => 'No se pudo actualizar la contraseña.']);
+                echo json_encode(['success' => false, 'message' => 'No se pudo actualizar la contraseña.'], JSON_UNESCAPED_UNICODE);
             }
         } catch (PDOException $e) {
             http_response_code(500);

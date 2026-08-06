@@ -71,7 +71,7 @@ class Router {
         if (!array_key_exists($method, $this->routes)) {
             http_response_code(404);
             header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'Ruta no encontrada']);
+            echo json_encode(['success' => false, 'message' => 'Ruta no encontrada'], JSON_UNESCAPED_UNICODE, JSON_UNESCAPED_UNICODE);
             return;
         }
 
@@ -105,7 +105,7 @@ class Router {
             }
             http_response_code(404);
             header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'Ruta no encontrada']);
+            echo json_encode(['success' => false, 'message' => 'Ruta no encontrada'], JSON_UNESCAPED_UNICODE, JSON_UNESCAPED_UNICODE);
             return;
         }
 
@@ -123,7 +123,7 @@ class Router {
         if (!file_exists($controllerFile)) {
             http_response_code(500);
             header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'Archivo de controlador no encontrado: ' . $controllerName]);
+            echo json_encode(['success' => false, 'message' => 'Archivo de controlador no encontrado: ' . $controllerName], JSON_UNESCAPED_UNICODE);
             return;
         }
 
@@ -140,9 +140,10 @@ class Router {
                 // Para GET: merge de query params con route params dinámicos
                 $data = array_merge($_GET ?? [], $routeParams);
             } elseif (in_array($method, ['POST', 'PUT', 'DELETE'])) {
-                // Para POST/PUT/DELETE: merge del cuerpo JSON con route params dinámicos
+                // Para POST/PUT/DELETE: merge de $_POST (form-data), body JSON y route params dinámicos
+                $postData = $_POST ?? [];
                 $bodyData = json_decode(file_get_contents('php://input'), true) ?? [];
-                $data = array_merge($bodyData, $routeParams);
+                $data = array_merge($postData, $bodyData, $routeParams);
             } else {
                 $data = [];
             }
@@ -165,7 +166,7 @@ class Router {
             $available = get_class_methods($controller);
             $found = null;
             foreach ($available as $m) {
-                $mNorm = preg_replace('/[\x{200B}\x{200C}\x{200D}\x{FEFF}]/u', '', trim($m));
+                $mNorm = preg_replace('/[\x{200B}\x{200C}\x{200D}\x{FEFF}]/u', '', trim($m, JSON_UNESCAPED_UNICODE));
                 if (strcasecmp($mNorm, $methodName) === 0) { // case-insensitive
                     $found = $m;
                     break;
@@ -198,7 +199,7 @@ class Router {
             }
             http_response_code(500);
             header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'Método de controlador no encontrado: ' . $methodName]);
+            echo json_encode(['success' => false, 'message' => 'Método de controlador no encontrado: ' . $methodName], JSON_UNESCAPED_UNICODE);
         }
     }
 }

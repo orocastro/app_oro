@@ -22,7 +22,7 @@ class Database {
         ];
 
         try {
-            $this->connection = new PDO($dsn, $this->username, $this->password, $options);            $this->connection->exec("SET NAMES utf8mb4");
+            $this->connection = new PDO($dsn, $this->username, $this->password, $options);
             $this->ensureTables();
         } catch (PDOException $e) {
             error_log("Error de conexión DB: " . $e->getMessage());

@@ -1,6 +1,6 @@
 <?php
 // PHP include file. Requiere que $base_url esté definido en index.php
-require_once __DIR__ . '/../backend/controllers/AuthController.php'; 
+require_once __DIR__ . '/../backend/controllers/AuthController.php';
 // Protección de ruta: Si no está logueado, redirigir al login
 if (!SessionManager::get('logged_in')) {
     header('Location: ' . $base_url);
@@ -27,23 +27,52 @@ $page_title = "Listado General de Trazabilidad";
         .data-table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 1200px;
-            /* Asegura que la tabla no se colapse demasiado */
+            min-width: 900px;
+            table-layout: auto;
         }
 
         .data-table th,
         .data-table td {
-            padding: 12px 15px;
+            padding: 8px 10px;
             text-align: left;
             border-bottom: 1px solid #e5e7eb;
             font-size: 0.875rem;
-            white-space: nowrap;
-            /* Evita que el contenido se rompa en varias líneas */
+            vertical-align: top;
+            overflow: hidden;
         }
+
+        /* Anchos explícitos por columna para evitar superposición */
+        .data-table th:nth-child(1),
+        .data-table td:nth-child(1) { width: 60px; min-width: 60px; white-space: nowrap; }
+        .data-table th:nth-child(2),
+        .data-table td:nth-child(2) { width: 100px; min-width: 100px; white-space: nowrap; }
+        .data-table th:nth-child(3),
+        .data-table td:nth-child(3) { width: 100px; min-width: 100px; white-space: nowrap; }
+        .data-table th:nth-child(4),
+        .data-table td:nth-child(4) { width: 110px; min-width: 110px; word-break: break-word; }
+        .data-table th:nth-child(5),
+        .data-table td:nth-child(5) { width: 100px; min-width: 100px; word-break: break-word; }
+        .data-table th:nth-child(6),
+        .data-table td:nth-child(6) { width: 130px; min-width: 130px; word-break: break-word; }
+        .data-table th:nth-child(7),
+        .data-table td:nth-child(7) { width: 50px; min-width: 50px; white-space: nowrap; text-align: center; }
+        .data-table th:nth-child(8),
+        .data-table td:nth-child(8) { width: 60px; min-width: 60px; white-space: nowrap; text-align: right; }
+        .data-table th:nth-child(9),
+        .data-table td:nth-child(9) { width: 60px; min-width: 60px; white-space: nowrap; text-align: right; }
+        .data-table th:nth-child(10),
+        .data-table td:nth-child(10) { width: 60px; min-width: 60px; white-space: nowrap; text-align: right; }
+        .data-table th:nth-child(11),
+        .data-table td:nth-child(11) { width: 60px; min-width: 60px; white-space: nowrap; text-align: right; }
+        .data-table th:nth-child(12),
+        .data-table td:nth-child(12) { width: 60px; min-width: 60px; white-space: nowrap; text-align: right; }
+        .data-table th:nth-child(13),
+        .data-table td:nth-child(13) { width: 60px; min-width: 60px; white-space: nowrap; text-align: right; }
+        .data-table th:nth-child(14),
+        .data-table td:nth-child(14) { width: 100px; min-width: 100px; white-space: nowrap; text-align: center; }
 
         .data-table th {
             background-color: #00796B;
-            /* teal-600 */
             color: white;
             font-weight: 600;
             text-transform: uppercase;
@@ -72,23 +101,45 @@ $page_title = "Listado General de Trazabilidad";
             color: #b45309;
         }
 
-        /* Amber */
+        .status-partial {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
         .status-completed {
             background-color: #d1fae5;
             color: #065f46;
         }
 
-        /* Green */
-        .photo-link {
-            color: #00796B;
-            text-decoration: underline;
-            cursor: pointer;
+        .status-cancelled {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-merma-favor {
+            background-color: #f3e8ff;
+            color: #7c3aed;
+        }
+
+        .saldo-pendiente {
+            background-color: #fff7ed;
+            color: #c2410c;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .saldo-cero {
+            background-color: #ecfdf5;
+            color: #065f46;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
         }
 
         .row-highlight {
             animation: flash 2s ease-in-out 1;
             box-shadow: inset 0 0 0 9999px rgba(16, 185, 129, 0.15);
-            /* teal-400 overlay */
         }
 
         @keyframes flash {
@@ -104,6 +155,84 @@ $page_title = "Listado General de Trazabilidad";
                 background-color: #d1fae5;
             }
         }
+
+        .photo-link {
+            color: #00796B;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .filter-bar select,
+        .filter-bar input[type="date"] {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            background-color: white;
+        }
+
+        .mobile-only {
+            display: none;
+        }
+
+        .desktop-only {
+            display: table;
+        }
+
+        .mobile-card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding-left: 1.5rem;
+            border-left: 2px solid #e5e7eb;
+            margin-left: 0.5rem;
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 1.25rem;
+        }
+
+        .timeline-marker {
+            position: absolute;
+            left: -1.75rem;
+            top: 0.25rem;
+            width: 0.75rem;
+            height: 0.75rem;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 0 0 2px #e5e7eb;
+        }
+
+        .timeline-content {
+            background: #f9fafb;
+            border-radius: 0.375rem;
+            padding: 0.75rem 1rem;
+        }
+
+        @media (max-width: 767px) {
+            .desktop-only {
+                display: none !important;
+            }
+            .mobile-only {
+                display: block !important;
+            }
+        }
     </style>
 </head>
 
@@ -114,6 +243,9 @@ $page_title = "Listado General de Trazabilidad";
         class="fixed top-0 left-0 right-0 p-4 shadow-md text-white z-10 flex justify-between items-center flex-wrap gap-2">
         <h1 class="text-xl font-bold accent-underline">Listado General</h1>
         <nav class="flex flex-wrap gap-3 text-sm items-center">
+            <a href="<?php echo $base_url; ?>home" class="btn-back hover:opacity-90" title="Regresar" aria-label="Regresar"><span
+                    class="icon icon-lg icon-gold" aria-hidden="true"><svg viewBox="0 0 24 24" width="1em" height="1em"
+                        fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></span></a>
             <span class="hidden sm:inline">Hola,
                 <?php echo htmlspecialchars(SessionManager::get('user_nombre') ?? 'Usuario'); ?>
             </span>
@@ -130,6 +262,11 @@ $page_title = "Listado General de Trazabilidad";
     <!-- Contenedor Principal de la Aplicación -->
     <main id="app-content" class="container mx-auto p-4 mt-20 flex-grow">
         <div class="bg-white p-6 rounded-lg shadow-xl form-card">
+            <div class="flex items-center gap-2 mb-4">
+                <a href="<?php echo $base_url; ?>home" class="btn-secondary px-3 py-1 text-sm inline-flex items-center gap-1">
+                    <span>←</span> Atrás
+                </a>
+            </div>
             <div class="flex justify-between items-center mb-4 flex-wrap gap-4">
                 <h2 class="text-2xl font-semibold text-gray-800">Historial de Movimientos</h2>
                 <div class="relative">
@@ -145,35 +282,45 @@ $page_title = "Listado General de Trazabilidad";
                 </div>
             </div>
 
+            <div class="filter-bar">
+                <select id="filter-estado">
+                    <option value="">Todos los estados</option>
+                </select>
+                <select id="filter-operario">
+                    <option value="">Todos los operarios</option>
+                </select>
+                <input type="date" id="filter-fecha" title="Filtrar por fecha">
+            </div>
+
             <div class="table-container">
-                <table class="data-table">
+                <table class="data-table desktop-only" id="main-table">
                     <thead>
                         <tr>
                             <th>CONSECUTIVO</th>
                             <th>ESTADO</th>
-                            <th>FECHA ENTREGA</th>
-                            <th>FECHA RECIBIDO</th>
+                            <th>FECHA</th>
+                            <th>OPERARIO</th>
                             <th>PROCESO</th>
-                            <th>RESPONSABLE</th>
                             <th>PRODUCTO</th>
-                            <th>PESO ENT. Gr</th>
-                            <th>PESO LEY Gr</th>
-                            <th>PESO REC. Gr</th>
-                            <th>MERMA Gr</th>
-                            <th>FOTO ENT.</th>
-                            <th>FOTO REC.</th>
-                            <th>OBSERVACIONES</th>
-                            <th>MATERIALES</th>
+                            <th>CANT.</th>
+                            <th>ORO</th>
+                            <th>MAT</th>
+                            <th>TOTAL</th>
+                            <th>RECIB</th>
+                            <th>SALDO</th>
+                            <th>MERMA</th>
                             <th>ACCIONES</th>
                         </tr>
                     </thead>
                     <tbody id="trazabilidad-body">
-                        <!-- Las filas se cargarán con JavaScript -->
                         <tr>
-                            <td colspan="15" class="text-center text-gray-500">Cargando datos...</td>
+                            <td colspan="14" class="text-center text-gray-500">Cargando datos...</td>
                         </tr>
                     </tbody>
                 </table>
+                <div id="mobile-cards" class="mobile-only">
+                    <p class="text-center text-gray-500 p-4">Cargando datos...</p>
+                </div>
             </div>
             <div class="flex items-center justify-between mt-4" id="pager" style="display:none;">
                 <button id="prev-page" class="px-3 py-1 bg-gray-200 rounded">Anterior</button>
@@ -191,9 +338,25 @@ $page_title = "Listado General de Trazabilidad";
                 <span id="export-status" class="text-sm" style="color:#b45309; display:none;">Biblioteca Excel no
                     encontrada. Coloque frontend/assets/js/vendor/xlsx.full.min.js</span>
             </div>
-
         </div>
     </main>
+
+    <!-- Modal de detalle de orden -->
+    <div id="order-detail-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-auto relative">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold" id="order-detail-title">Detalle de Orden</h3>
+                <button class="text-gray-500 hover:text-gray-800 text-3xl leading-none" onclick="closeOrderDetailModal();" aria-label="Cerrar">&times;</button>
+            </div>
+            <div id="order-detail-content" class="space-y-4">
+                <!-- Contenido cargado por JS -->
+            </div>
+            <div class="flex justify-end gap-2 mt-6 pt-4 border-t">
+                <button id="btn-add-return" class="btn-primary px-4 py-2" style="background-color: #059669 !important;">Agregar devolución</button>
+                <button id="btn-view-materials" class="btn-primary px-4 py-2" style="background-color: #7c3aed !important;" onclick="viewMaterialsFromDetail()">Ver materiales</button>
+            </div>
+        </div>
+    </div>
 
     <div id="photo-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-auto">
@@ -236,25 +399,40 @@ $page_title = "Listado General de Trazabilidad";
     <!-- SheetJS local para exportar a XLSX (coloque xlsx.full.min.js en frontend/assets/js/vendor/) -->
     <script src="<?php echo $base_url; ?>frontend/assets/js/vendor/xlsx.full.min.js"></script>
     <script>
-        const API_TRAZABILIDAD = 'trazabilidad';
+        const API_ORDENES = 'ordenes';
+        const API_TRAZABILIDAD_MATERIALES = 'trazabilidad/materiales';
         const trazabilidadBody = document.getElementById('trazabilidad-body');
+        const mobileCards = document.getElementById('mobile-cards');
         const photoModal = document.getElementById('photo-modal');
         const modalGallery = document.getElementById('modal-gallery');
         const modalTitle = document.getElementById('modal-title');
         const exportBtn = document.getElementById('export-excel-btn');
-        const searchInput = document.getElementById('search-input');    // Variable para verificar si el usuario es administrador
+        const searchInput = document.getElementById('search-input');
         let isAdmin = false;
 
-        // Cache de datos para exportación
         let trazabilidadDataCache = [];
         let filteredCache = [];
-        let page = 1;
-        const pageSize = 10;
+        let currentPage = 1;
+        const pageSize = 50;
+        let totalPages = 1;
         let highlightParam = null;
+        let currentDetailConsecutivo = null;
 
-        /**
-         * Formatea la fecha y hora.
-         */
+        const ESTADO_CONFIG = {
+            pendiente: { class: 'status-pending', text: 'PENDIENTE', color: 'amber' },
+            parcial: { class: 'status-partial', text: 'PARCIAL', color: 'blue' },
+            completado: { class: 'status-completed', text: 'COMPLETADO', color: 'green' },
+            cancelado: { class: 'status-cancelled', text: 'CANCELADO', color: 'red' },
+            merma_a_favor: { class: 'status-merma-favor', text: 'MERMA A FAVOR', color: 'purple' }
+        };
+
+        function fmtNum(n) {
+            if (n === null || n === undefined || n === '') return '-';
+            const val = parseFloat(n);
+            if (isNaN(val)) return '-';
+            return val.toFixed(2).replace('.', ',');
+        }
+
         function formatDate(datetimeString) {
             if (!datetimeString) return '-';
             try {
@@ -268,356 +446,322 @@ $page_title = "Listado General de Trazabilidad";
             }
         }
 
+        function renderStatusBadge(estado) {
+            const cfg = ESTADO_CONFIG[estado] || ESTADO_CONFIG.pendiente;
+            return `<span class="status-badge ${cfg.class}">${cfg.text}</span>`;
+        }
+
         function renderRows(list) {
             trazabilidadBody.innerHTML = '';
+            mobileCards.innerHTML = '';
             if (!list || list.length === 0) {
-                trazabilidadBody.innerHTML = '<tr><td colspan="15" class="text-center text-gray-500">No se encontraron registros de trazabilidad.</td></tr>';
+                trazabilidadBody.innerHTML = '<tr><td colspan="14" class="text-center text-gray-500">No se encontraron registros.</td></tr>';
+                mobileCards.innerHTML = '<p class="text-center text-gray-500 p-4">No se encontraron registros.</p>';
                 document.getElementById('pager').style.display = 'none';
                 return;
             }
             const total = list.length;
-            const totalPages = Math.max(1, Math.ceil(total / pageSize));
-            page = Math.min(page, totalPages);
-            const start = (page - 1) * pageSize;
+            const totalPagesLocal = Math.max(1, Math.ceil(total / pageSize));
+            currentPage = Math.min(currentPage, totalPagesLocal);
+            const start = (currentPage - 1) * pageSize;
             const slice = list.slice(start, start + pageSize);
+            updatePager(totalPagesLocal);
+
+            slice.forEach(item => {
+                const consecStr = String(item.consecutivo).padStart(4, '0');
+                const estado = item.estado || 'pendiente';
+                const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
+
+                let actions = [];
+                actions.push(`<button onclick="openOrderDetailModal('${consecStr}')" class="btn-primary px-2 py-1 text-xs inline-block" style="background-color: #2563eb !important;">Ver detalle</button>`);
+                if (estado === 'pendiente' || estado === 'parcial') {
+                    const returnUrl = base.replace(/\/$/, '') + '/trazabilidad?mode=devolucion&consecutivo=' + encodeURIComponent(consecStr);
+                    actions.push(`<a href="${returnUrl}" class="btn-primary px-2 py-1 text-xs inline-block" style="background-color: #059669 !important;">Agregar devolución</a>`);
+                }
+                if (isAdmin) {
+                    const editUrl = base.replace(/\/$/, '') + '/trazabilidad_edit?id=' + encodeURIComponent(item.consecutivo);
+                    actions.push(`<a href="${editUrl}" class="btn-primary px-2 py-1 text-xs inline-block" style="background-color: #7c3aed !important;">Editar</a>`);
+                }
+
+                const row = document.createElement('tr');
+                if (highlightParam && consecStr === highlightParam) {
+                    row.classList.add('row-highlight');
+                    setTimeout(() => row.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+                }
+                const pesoOro = parseFloat(item.total_oro_entregado) || 0;
+                const pesoMat = parseFloat(item.total_mat_entregado) || 0;
+                const totalEnt = pesoOro + pesoMat;
+                const totalRecibido = (parseFloat(item.total_oro_recibido) || 0) + (parseFloat(item.total_mat_recibido) || 0);
+                const saldoNum = parseFloat(item.saldo_oro) || 0;
+                const saldoClass = saldoNum > 0 ? 'saldo-pendiente' : 'saldo-cero';
+                const mermaNum = parseFloat(item.merma) || 0;
+                const mermaClass = mermaNum > 0 ? 'text-green-600 font-bold' : (mermaNum < 0 ? 'text-red-600 font-bold' : '');
+                const mermaDisplay = mermaNum > 0 ? '+' + fmtNum(mermaNum) : fmtNum(mermaNum);
+
+                row.innerHTML = `
+                    <td><a href="#" onclick="openOrderDetailModal('${consecStr}'); return false;" class="font-mono font-bold text-teal-700">${consecStr}</a></td>
+                    <td>${renderStatusBadge(estado)}</td>
+                    <td>${formatDate(item.fecha_creacion)}</td>
+                    <td>${item.responsable_nombre || '-'}</td>
+                    <td>${item.proceso_nombre || '-'}</td>
+                    <td>${item.producto_nombre || '-'}</td>
+                    <td>${item.cantidad || '-'}</td>
+                    <td>${fmtNum(pesoOro)}</td>
+                    <td>${fmtNum(pesoMat)}</td>
+                    <td class="font-bold text-gray-800">${fmtNum(totalEnt)}</td>
+                    <td>${fmtNum(totalRecibido)}</td>
+                    <td class="${saldoClass}">${fmtNum(saldoNum)}</td>
+                    <td class="${mermaClass}">${mermaDisplay}</td>
+                    <td>${actions.join(' ')}</td>
+                `;
+                trazabilidadBody.appendChild(row);
+
+                const card = document.createElement('div');
+                card.className = 'mobile-card';
+                const cardMermaClass = mermaNum > 0 ? 'text-green-600 font-bold' : (mermaNum < 0 ? 'text-red-600 font-bold' : '');
+                const cardMermaDisplay = mermaNum > 0 ? '+' + fmtNum(mermaNum) : fmtNum(mermaNum);
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="font-mono font-bold text-teal-700 text-lg">#${consecStr}</span>
+                        ${renderStatusBadge(estado)}
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-sm mb-3">
+                        <div><span class="text-gray-500">Operario:</span> ${item.responsable_nombre || '-'}</div>
+                        <div><span class="text-gray-500">Proceso:</span> ${item.proceso_nombre || '-'}</div>
+                        <div><span class="text-gray-500">Producto:</span> ${item.producto_nombre || '-'}</div>
+                        <div><span class="text-gray-500">Cantidad:</span> ${item.cantidad || '-'}</div>
+                        <div><span class="text-gray-500">Oro:</span> ${fmtNum(pesoOro)} gr</div>
+                        <div><span class="text-gray-500">Mat:</span> ${fmtNum(pesoMat)} gr</div>
+                        <div class="col-span-2"><span class="text-gray-500">Total:</span> <span class="font-semibold text-gray-800">${fmtNum(totalEnt)} gr</span></div>
+                        <div><span class="text-gray-500">Recib:</span> ${fmtNum(totalRecibido)} gr</div>
+                        <div><span class="text-gray-500">Saldo:</span> <span class="${saldoClass} font-semibold">${fmtNum(saldoNum)} gr</span></div>
+                        <div class="col-span-2"><span class="text-gray-500">Merma:</span> <span class="${cardMermaClass}">${cardMermaDisplay} gr</span></div>
+                    </div>
+                    <div class="flex flex-wrap gap-2">${actions.join(' ')}</div>
+                `;
+                mobileCards.appendChild(card);
+            });
+        }
+
+        function updatePager(totalPagesLocal) {
             const pager = document.getElementById('pager');
             const pageInfo = document.getElementById('page-info');
             const prevBtn = document.getElementById('prev-page');
             const nextBtn = document.getElementById('next-page');
-            pageInfo.textContent = `Página ${page} de ${totalPages}`;
-            prevBtn.disabled = page <= 1;
-            nextBtn.disabled = page >= totalPages;
-            pager.style.display = total > pageSize ? 'flex' : 'none';
-
-            let highlightedRow = null;
-
-            slice.forEach(item => {
-                // Nueva lógica: un registro está completado si:
-                // 1. Tiene fecha_recibido (procesos normales completados)
-                // 2. O si es un proceso auto-completado (ID 1,2,3,4) que no necesita recibido
-                const procesoId = parseInt(item.proceso_id || 0);
-                const esProcesoAutoCompletado = [1, 2, 3, 4].includes(procesoId);
-                const isCompleted = item.fecha_recibido !== null || esProcesoAutoCompletado;
-
-                const statusClass = isCompleted ? 'status-completed' : 'status-pending';
-                const statusText = isCompleted ? 'COMPLETADO' : 'PENDIENTE';
-
-                // Mostrar peso_ley siempre que esté disponible
-                const pesoLeyDisplay = ((item.peso_ley_gr === null || item.peso_ley_gr === undefined)
-                    ? '0,00'
-                    : parseFloat(item.peso_ley_gr).toFixed(2).replace('.', ','));
-
-                // Mostrar merma: para procesos auto-completados siempre es 0, para otros depende del estado
-                let mermaDisplay;
-                if (esProcesoAutoCompletado) {
-                    mermaDisplay = '0,00';
-                } else if (!isCompleted) {
-                    mermaDisplay = '-';
-                } else {
-                    mermaDisplay = ((item.merma_gr === null || item.merma_gr === undefined)
-                        ? '0,00'
-                        : parseFloat(item.merma_gr).toFixed(2).replace('.', ','));
-                }
-                const row = document.createElement('tr');
-
-                const photoCell = (pathJson, type) => {
-                    if (!pathJson) return '-';
-                    try {
-                        const paths = JSON.parse(pathJson);
-                        if (!Array.isArray(paths) || paths.length === 0) return '-';
-
-                        // Escapar las rutas para pasarlas como argumento de forma segura
-                        const safePaths = JSON.stringify(paths.map(p => fullPhotoUrl(p)));
-                        const safeTitle = `Galería de ${type} - Consecutivo ${item.consecutivo}`;
-
-                        return `<span class="photo-link" onclick='openPhotoModal(${safePaths}, "${safeTitle}")'>Ver Fotos (${paths.length})</span>`;
-                    } catch (e) {
-                        // Fallback para rutas antiguas que no son JSON
-                        return `<span class="photo-link" onclick='openPhotoModal(["${fullPhotoUrl(pathJson)}"], "Foto de ${type} - Consecutivo ${item.consecutivo}")'>Ver Foto</span>`;
-                    }
-                };
-
-                const consecStr = String(item.consecutivo).padStart(4, '0');
-                const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
-                const actionUrl = base.replace(/\/$/, '') + '/trazabilidad?mode=recibido&consecutivo=' + encodeURIComponent(consecStr);
-
-                // Construir acciones disponibles
-                let actions = [];
-
-                // Botón "Recibir" para procesos no completados y que NO sean auto-completados
-                if (!isCompleted && !esProcesoAutoCompletado) {
-                    actions.push(`<a href="${actionUrl}" class="btn-primary px-3 py-1 text-xs inline-block">Recibir</a>`);
-                }
-
-                // Botón "Editar" solo para administradores
-                if (isAdmin) {
-                    const editUrl = base.replace(/\/$/, '') + '/trazabilidad_edit?id=' + encodeURIComponent(item.consecutivo);
-                    actions.push(`<a href="${editUrl}" class="btn-primary px-3 py-1 text-xs inline-block" style="background-color: #2563eb !important;">Editar</a>`);
-                }
-
-                const actionCell = actions.length > 0 ? actions.join(' ') : '-';
-                let obsEntrega = (item.obs_entrega_pura || '').trim();
-                let obsRec = (item.obs_recibido_pura || '').trim();
-                if (!obsEntrega && !obsRec) {
-                    const raw = (item.observaciones_entrega || '').toString();
-                    raw.split(/\r?\n/).forEach(line => {
-                        const l = line.trim();
-                        if (/^ENTREGA:/i.test(l)) obsEntrega = l.replace(/^ENTREGA:\s*/i, '').trim();
-                        if (/^RECIBIDO:/i.test(l)) obsRec = l.replace(/^RECIBIDO:\s*/i, '').trim();
-                    });
-                }
-                const obsDisplay = `Entrega: ${obsEntrega || 'Sin observaciones'}${obsRec ? ' | Recibido: ' + obsRec : ''}`;
-
-                row.innerHTML = `
-                    <td>${consecStr}</td>
-                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                    <td>${formatDate(item.fecha_entrega)}</td>
-                    <td>${formatDate(item.fecha_recibido)}</td>
-                    <td>${item.proceso_nombre || '-'}</td>
-                    <td>${item.responsable_nombre || '-'}</td>
-                    <td>${item.producto_nombre || '-'}</td>
-                    <td>${parseFloat(item.peso_entregado_gr).toFixed(2).replace('.', ',')}</td>
-                    <td>${pesoLeyDisplay}</td>
-                    <td>${item.peso_recibido_gr !== null ? parseFloat(item.peso_recibido_gr).toFixed(2).replace('.', ',') : '-'}</td>
-                    <td>${mermaDisplay}</td>
-                    <td>${photoCell(item.foto_entrega_path, 'Entrega')}</td>
-                    <td>${photoCell(item.foto_recibido_path, 'Recibido')}</td>
-                    <td>${obsDisplay}</td>
-                    <td><span class="photo-link" onclick="openMaterialsModal('${consecStr}')">Ver</span></td>
-                    <td>${actionCell}</td>
-                `;
-                // Resaltar si corresponde
-                if (highlightParam && consecStr === highlightParam) {
-                    row.classList.add('row-highlight');
-                    highlightedRow = row;
-                }
-                trazabilidadBody.appendChild(row);
-            });
-
-            if (highlightedRow) {
-                setTimeout(() => {
-                    highlightedRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 100);
-            }
+            pageInfo.textContent = `Página ${currentPage} de ${totalPagesLocal}`;
+            prevBtn.disabled = currentPage <= 1;
+            nextBtn.disabled = currentPage >= totalPagesLocal;
+            pager.style.display = totalPagesLocal > 1 ? 'flex' : 'none';
         }
 
-        /**
-         * Carga los datos y prepara la paginación
-         */
-        async function loadTrazabilidadData() {
-            trazabilidadBody.innerHTML = '<tr><td colspan="15" class="text-center text-gray-500">Cargando datos...</td></tr>';
-            const result = await callApi(API_TRAZABILIDAD, 'GET');
+        async function loadTrazabilidadData(targetPage = 1) {
+            currentPage = targetPage;
+            trazabilidadBody.innerHTML = '<tr><td colspan="14" class="text-center text-gray-500">Cargando datos...</td></tr>';
+            mobileCards.innerHTML = '<p class="text-center text-gray-500 p-4">Cargando datos...</p>';
+            const result = await callApi(`${API_ORDENES}?page=${currentPage}&limit=${pageSize}`, 'GET');
             if (result.success && result.data && result.data.length > 0) {
                 trazabilidadDataCache = result.data.slice();
-                filteredCache = trazabilidadDataCache;
-                // Calcular página que contiene el highlight si existe
+                // Si la API devuelve paginación, usarla; si no, calcular localmente
+                if (result.pagination) {
+                    totalPages = Math.max(1, Math.ceil(result.pagination.total / pageSize));
+                } else {
+                    totalPages = Math.max(1, Math.ceil(trazabilidadDataCache.length / pageSize));
+                }
+                populateFilters(trazabilidadDataCache);
+                applyFilters();
                 const params = new URLSearchParams(window.location.search);
                 highlightParam = params.get('highlight');
                 if (highlightParam) {
                     const idx = filteredCache.findIndex(it => String(it.consecutivo).padStart(4, '0') === highlightParam);
                     if (idx >= 0) {
-                        page = Math.floor(idx / pageSize) + 1;
-                    } else {
-                        page = 1;
+                        currentPage = Math.floor(idx / pageSize) + 1;
                     }
-                } else {
-                    page = 1;
+                    renderRows(filteredCache);
                 }
-                renderRows(filteredCache);
             } else if (result.success) {
-                trazabilidadBody.innerHTML = '<tr><td colspan="15" class="text-center text-gray-500">No se encontraron registros de trazabilidad.</td></tr>';
-                document.getElementById('pager').style.display = 'none';
+                trazabilidadDataCache = [];
+                filteredCache = [];
+                renderRows([]);
             } else {
-                trazabilidadBody.innerHTML = `<tr><td colspan=\"15\" class=\"text-center text-red-600\">Error al cargar datos: ${result.message || 'Desconocido'}</td></tr>`;
+                trazabilidadBody.innerHTML = `<tr><td colspan="14" class="text-center text-red-600">Error al cargar datos: ${result.message || 'Desconocido'}</td></tr>`;
                 showMessageModal('Error de Carga', result.message || 'No se pudo obtener el historial de trazabilidad.', 'error');
             }
         }
 
-        // --- INICIALIZACIÓN ---
-        // Utilidad: construir URL absoluta para fotos
-        function fullPhotoUrl(path) {
-            if (!path) return '';
-            const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
-            const trimmedBase = base.replace(/\/$/, '');
-            const normalized = path.startsWith('/') ? path : ('/' + path);
-            return trimmedBase + normalized;
+        function populateFilters(data) {
+            const estadoSel = document.getElementById('filter-estado');
+            const operarioSel = document.getElementById('filter-operario');
+            const estados = [...new Set(data.map(d => d.estado).filter(Boolean))];
+            const operarios = [...new Set(data.map(d => d.responsable_nombre).filter(Boolean))];
+            estadoSel.innerHTML = '<option value="">Todos los estados</option>' + estados.map(e => {
+                const cfg = ESTADO_CONFIG[e] || ESTADO_CONFIG.pendiente;
+                return `<option value="${e}">${cfg.text}</option>`;
+            }).join('');
+            operarioSel.innerHTML = '<option value="">Todos los operarios</option>' + operarios.map(o => `<option value="${o}">${o}</option>`).join('');
         }
 
-        // Exportar a XLSX usando SheetJS
-        // Exportar a XLSX usando SheetJS
-        function exportToXLSX() {
-            if (!trazabilidadDataCache || trazabilidadDataCache.length === 0) {
-                showMessageModal('Exportación', 'No hay datos para exportar.', 'info');
-                return;
-            }
-            if (typeof XLSX === 'undefined') {
-                showMessageModal('Exportación', 'No se pudo cargar el módulo de Excel. Verifique su conexión.', 'error');
-                return;
-            }
-            const headers = [
-                'CONSECUTIVO', 'ESTADO', 'FECHA_ENTREGA', 'FECHA_RECIBIDO', 'PROCESO', 'RESPONSABLE', 'PRODUCTO',
-                'PESO_ENT_GR', 'PESO_LEY_GR', 'PESO_REC_GR', 'MERMA_GR', 'SALDO', 'FOTO_ENT_URL', 'FOTO_REC_URL', 'OBS_ENTREGA', 'OBS_REC_IDO'
-            ];
-
-            const ws = XLSX.utils.aoa_to_sheet([headers]);
-
-            // Ordenar los datos para el cálculo de saldo acumulativo
-            const datosOrdenados = [...trazabilidadDataCache].sort((a, b) => parseInt(a.consecutivo) - parseInt(b.consecutivo));
-
-            datosOrdenados.forEach((item, index) => {
-                const rowIndex = index + 2; // +2 porque la data empieza en la fila 2 (1-based)
-
-                const procesoId = parseInt(item.proceso_id || 0);
-                const esProcesoAutoCompletado = [1, 2, 3, 4].includes(procesoId);
-                const isCompleted = item.fecha_recibido !== null || esProcesoAutoCompletado;
-                const estado = isCompleted ? 'COMPLETADO' : 'PENDIENTE';
-
-                const pesoEntregadoNum = Number(item.peso_entregado_gr) || 0;
-                const pesoRecibidoNum = (item.peso_recibido_gr !== null && item.peso_recibido_gr !== undefined) ? Number(item.peso_recibido_gr) : null;
-                const pesoLeyNum = (item.peso_ley_gr !== null && item.peso_ley_gr !== undefined) ? Number(item.peso_ley_gr) : 0;
-
-                let mermaNumerica;
-                if (esProcesoAutoCompletado) {
-                    mermaNumerica = 0;
-                } else {
-                    mermaNumerica = (item.merma_gr !== null && item.merma_gr !== undefined) ? Number(item.merma_gr) : 0;
-                }
-
-                // Fórmula para el saldo
-                const formulaSaldo = (rowIndex === 2)
-                    ? `H${rowIndex}-J${rowIndex}` // Saldo inicial (H es PESO_ENT_GR, J es PESO_REC_GR)
-                    : `L${rowIndex - 1}+H${rowIndex}-J${rowIndex}`; // Saldo acumulativo
-
-                let obsEnt = (item.obs_entrega_pura || '').trim();
-                let obsRec = (item.obs_recibido_pura || '').trim();
-                if (!obsEnt && !obsRec) {
-                    const raw = (item.observaciones_entrega || '').toString();
-                    raw.split(/\r?\n/).forEach(line => {
-                        const l = line.trim();
-                        if (/^ENTREGA:/i.test(l)) obsEnt = l.replace(/^ENTREGA:\s*/i, '').trim();
-                        if (/^RECIBIDO:/i.test(l)) obsRec = l.replace(/^RECIBIDO:\s*/i, '').trim();
-                    });
-                }
-
-                const rowData = [
-                    String(item.consecutivo).padStart(4, '0'),
-                    estado,
-                    item.fecha_entrega || '',
-                    item.fecha_recibido || '',
-                    item.proceso_nombre || '',
-                    item.responsable_nombre || '',
-                    item.producto_nombre || '',
-                    { t: 'n', v: pesoEntregadoNum, z: '#,##0.00' },
-                    { t: 'n', v: pesoLeyNum, z: '#,##0.00' },
-                    (pesoRecibidoNum !== null) ? { t: 'n', v: pesoRecibidoNum, z: '#,##0.00' } : null,
-                    { t: 'n', v: mermaNumerica, z: '#,##0.00' },
-                    { t: 'n', v: 0, f: formulaSaldo, z: '#,##0.00' }, // Celda con fórmula y formato
-                    fullPhotoUrl(item.foto_entrega_path),
-                    fullPhotoUrl(item.foto_recibido_path),
-                    obsEnt || 'Sin observaciones',
-                    obsRec || ''
-                ];
-
-                XLSX.utils.sheet_add_aoa(ws, [rowData], { origin: -1 });
+        function applyFilters() {
+            const query = document.getElementById('search-input').value.toLowerCase().trim();
+            const estado = document.getElementById('filter-estado').value;
+            const operario = document.getElementById('filter-operario').value;
+            const fecha = document.getElementById('filter-fecha').value;
+            filteredCache = trazabilidadDataCache.filter(item => {
+                const matchesQuery = !query || Object.values(item).some(v => String(v).toLowerCase().includes(query));
+                const matchesEstado = !estado || item.estado === estado;
+                const matchesOperario = !operario || item.responsable_nombre === operario;
+                const matchesFecha = !fecha || (item.fecha_creacion && item.fecha_creacion.startsWith(fecha));
+                return matchesQuery && matchesEstado && matchesOperario && matchesFecha;
             });
-
-            // Ajustar ancho de columnas
-            ws['!cols'] = [
-                { wch: 12 }, { wch: 12 }, { wch: 20 }, { wch: 20 }, { wch: 15 },
-                { wch: 20 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
-                { wch: 12 }, { wch: 12 }, { wch: 30 }, { wch: 30 }, { wch: 40 }, { wch: 40 }
-            ];
-
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Trazabilidad');
-            const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-            const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            const now = new Date();
-            const pad = n => String(n).padStart(2, '0');
-            const fileName = `trazabilidad_${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.xlsx`;
-            a.href = url;
-            a.download = fileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        function filterData(query) {
-            if (!query) {
-                filteredCache = trazabilidadDataCache;
-            } else {
-                const lowerCaseQuery = query.toLowerCase();
-                filteredCache = trazabilidadDataCache.filter(item => {
-                    return Object.values(item).some(val =>
-                        String(val).toLowerCase().includes(lowerCaseQuery)
-                    );
-                });
-            }
-            page = 1; // Reset page to 1 on new search
+            currentPage = 1;
             renderRows(filteredCache);
         }
 
-        window.onload = function () {
-            loadTrazabilidadData();
-
-            // Listener para el campo de búsqueda
-            if (searchInput) {
-                searchInput.addEventListener('input', (e) => {
-                    filterData(e.target.value);
-                });
-            }
-
-            // Listener de Logout
-            document.getElementById('logout-btn').addEventListener('click', async function (e) {
-                e.preventDefault();
-                const result = await callApi('logout', 'GET');
-                if (result.success) {
-                    const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
-                    window.location.href = base;
+        async function openOrderDetailModal(consecutivoStr) {
+            currentDetailConsecutivo = consecutivoStr;
+            const modal = document.getElementById('order-detail-modal');
+            const content = document.getElementById('order-detail-content');
+            const btnAddReturn = document.getElementById('btn-add-return');
+            const btnMaterials = document.getElementById('btn-view-materials');
+            modal.style.display = 'flex';
+            content.innerHTML = '<p class="text-gray-500">Cargando detalle...</p>';
+            try {
+                const result = await callApi(`${API_ORDENES}/${parseInt(consecutivoStr, 10)}`, 'GET');
+                if (result.success && result.data) {
+                    const d = result.data;
+                    const estado = d.estado || 'pendiente';
+                    const cfg = ESTADO_CONFIG[estado] || ESTADO_CONFIG.pendiente;
+                    const saldoNum = parseFloat(d.saldo_oro) || 0;
+                    const detOro = parseFloat(d.total_oro_entregado) || 0;
+                    const detMat = parseFloat(d.total_mat_entregado) || 0;
+                    const detTotal = detOro + detMat;
+                    const detRecibido = (parseFloat(d.total_oro_recibido) || 0) + (parseFloat(d.total_mat_recibido) || 0);
+                    const detMerma = parseFloat(d.merma) || 0;
+                    const mermaFavorAlert = detMerma > 0 ? `
+                        <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4 flex items-center gap-3">
+                            <span class="text-2xl">✨</span>
+                            <div>
+                                <div class="font-bold text-purple-800">¡Merma a favor detectada!</div>
+                                <div class="text-sm text-purple-600">Se recuperó ${fmtNum(detMerma)} gr más de lo entregado. Estado: MERMA A FAVOR.</div>
+                            </div>
+                        </div>
+                    ` : '';
+                    let html = `
+                        <div class="flex flex-col md:flex-row md:justify-between md:items-start gap-2 mb-4 pb-4 border-b">
+                            <div>
+                                <h2 class="text-2xl font-bold text-gray-800">Orden #${String(d.consecutivo).padStart(4, '0')}</h2>
+                                <p class="text-gray-600">${d.proceso_nombre || '-'} → ${d.producto_nombre || '-'}</p>
+                            </div>
+                            <div class="text-right">
+                                ${renderStatusBadge(estado)}
+                                <p class="text-sm text-gray-500 mt-1">${d.responsable_nombre || '-'}</p>
+                            </div>
+                        </div>
+                        ${mermaFavorAlert}
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                            <div class="bg-gray-50 p-4 rounded-lg text-center">
+                                <div class="text-xs text-gray-500 uppercase mb-1">Oro Entregado</div>
+                                <div class="text-2xl font-bold text-yellow-600">${fmtNum(detOro)} <span class="text-sm font-normal">gr</span></div>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg text-center">
+                                <div class="text-xs text-gray-500 uppercase mb-1">Materiales Entregados</div>
+                                <div class="text-2xl font-bold text-gray-600">${fmtNum(detMat)} <span class="text-sm font-normal">gr</span></div>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg text-center">
+                                <div class="text-xs text-gray-500 uppercase mb-1">Total Entregado</div>
+                                <div class="text-2xl font-bold text-gray-800">${fmtNum(detTotal)} <span class="text-sm font-normal">gr</span></div>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg text-center">
+                                <div class="text-xs text-gray-500 uppercase mb-1">Total Recibido</div>
+                                <div class="text-2xl font-bold text-teal-700">${fmtNum(detRecibido)} <span class="text-sm font-normal">gr</span></div>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg text-center">
+                                <div class="text-xs text-gray-500 uppercase mb-1">Saldo</div>
+                                <div class="text-2xl font-bold ${saldoNum > 0 ? 'text-orange-600' : 'text-green-600'}">${fmtNum(saldoNum)} <span class="text-sm font-normal">gr</span></div>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg text-center">
+                                <div class="text-xs text-gray-500 uppercase mb-1">Merma</div>
+                                <div class="text-2xl font-bold ${detMerma > 0 ? 'text-green-600' : 'text-red-600'}">${fmtNum(detMerma)} <span class="text-sm font-normal">gr</span></div>
+                            </div>
+                        </div>
+                    `;
+                    if (d.movimientos && d.movimientos.length > 0) {
+                        html += '<h3 class="text-lg font-semibold text-gray-700 mb-3">Movimientos</h3>';
+                        html += '<div class="timeline">';
+                        d.movimientos.forEach(mov => {
+                            const isEntrega = mov.tipo === 'entrega';
+                            const safePaths = mov.fotos && mov.fotos.length > 0 ? JSON.stringify(mov.fotos.map(p => fullPhotoUrl(p))) : '[]';
+                            const safeTitle = `Fotos de ${mov.tipo} - ${formatDate(mov.fecha)}`;
+                            const photosHtml = mov.fotos && mov.fotos.length > 0
+                                ? `<button onclick='openPhotoModal(${safePaths}, "${safeTitle}")' class="text-teal-600 underline text-sm mt-1">Ver ${mov.fotos.length} foto(s)</button>`
+                                : '';
+                            const movOro = parseFloat(mov.peso_oro) || 0;
+                            const movMat = parseFloat(mov.peso_materiales) || 0;
+                            const movTotal = movOro + movMat;
+                            const movDetail = (movOro > 0 || movMat > 0) 
+                                ? `<div class="text-xs text-gray-500 mt-1">Oro: ${fmtNum(movOro)} gr | Mat: ${fmtNum(movMat)} gr</div>` 
+                                : '';
+                            html += `
+                                <div class="timeline-item">
+                                    <div class="timeline-marker ${isEntrega ? 'bg-teal-600' : 'bg-blue-600'}"></div>
+                                    <div class="timeline-content">
+                                        <div class="flex justify-between items-start">
+                                            <span class="font-semibold text-sm ${isEntrega ? 'text-teal-700' : 'text-blue-700'}">${isEntrega ? 'Entrega' : 'Devolución'}</span>
+                                            <span class="text-xs text-gray-400">${formatDate(mov.fecha)}</span>
+                                        </div>
+                                        <div class="text-gray-800 font-bold mt-1">${fmtNum(movTotal)} gr</div>
+                                        ${movDetail}
+                                        <div class="text-sm text-gray-600 mt-1">${mov.observaciones || 'Sin observaciones'}</div>
+                                        ${photosHtml}
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        html += '</div>';
+                    } else {
+                        html += '<p class="text-gray-500 text-center py-4">Sin movimientos registrados.</p>';
+                    }
+                    content.innerHTML = html;
+                    // Configurar botón Agregar devolución
+                    if (estado === 'pendiente' || estado === 'parcial') {
+                        const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
+                        btnAddReturn.onclick = () => {
+                            window.location.href = base.replace(/\/$/, '') + '/trazabilidad?mode=devolucion&consecutivo=' + encodeURIComponent(consecutivoStr);
+                        };
+                        btnAddReturn.style.display = 'inline-block';
+                    } else {
+                        btnAddReturn.style.display = 'none';
+                    }
+                    // Configurar botón Ver materiales
+                    btnMaterials.onclick = () => {
+                        closeOrderDetailModal();
+                        openMaterialsModal(consecutivoStr);
+                    };
                 } else {
-                    showMessageModal('Error', 'No se pudo cerrar sesión.', 'error');
+                    content.innerHTML = `<p class="text-red-600">${result.message || 'Error cargando detalle'}</p>`;
+                    btnAddReturn.style.display = 'none';
                 }
-            });
-
-            // Listener de Exportación
-            if (exportBtn) {
-                exportBtn.addEventListener('click', exportToXLSX);
+            } catch (e) {
+                content.innerHTML = '<p class="text-red-600">Error de conexión al cargar detalle.</p>';
+                btnAddReturn.style.display = 'none';
             }
+        }
 
-            // Habilitar/Deshabilitar exportación según disponibilidad de XLSX
-            const statusEl = document.getElementById('export-status');
-            if (typeof XLSX === 'undefined') {
-                exportBtn.disabled = true;
-                exportBtn.classList.add('opacity-60', 'cursor-not-allowed');
-                if (statusEl) statusEl.style.display = 'inline';
-            } else {
-                exportBtn.disabled = false;
-                exportBtn.classList.remove('opacity-60', 'cursor-not-allowed');
-                if (statusEl) statusEl.style.display = 'none';
-            }
+        function closeOrderDetailModal() {
+            document.getElementById('order-detail-modal').style.display = 'none';
+            currentDetailConsecutivo = null;
+        }
 
-            // Controles de paginación
-            const prevBtn = document.getElementById('prev-page');
-            const nextBtn = document.getElementById('next-page');
-            if (prevBtn && nextBtn) {
-                prevBtn.addEventListener('click', () => {
-                    if (page > 1) { page--; renderRows(filteredCache); }
-                });
-                nextBtn.addEventListener('click', () => {
-                    const totalPages = Math.max(1, Math.ceil((filteredCache?.length || 0) / pageSize));
-                    if (page < totalPages) { page++; renderRows(filteredCache); }
-                });
+        function viewMaterialsFromDetail() {
+            if (currentDetailConsecutivo) {
+                closeOrderDetailModal();
+                openMaterialsModal(currentDetailConsecutivo);
             }
-        };
+        }
 
         // --- Modal de fotos: abrir/cerrar ---
         function openPhotoModal(photoUrls, title) {
             modalTitle.textContent = title;
-            modalGallery.innerHTML = ''; // Limpiar galería anterior
-
+            modalGallery.innerHTML = '';
             if (Array.isArray(photoUrls) && photoUrls.length > 0) {
                 photoUrls.forEach(url => {
                     const img = document.createElement('img');
@@ -636,7 +780,6 @@ $page_title = "Listado General de Trazabilidad";
             } else {
                 modalGallery.textContent = 'No hay fotos para mostrar.';
             }
-
             photoModal.style.display = 'flex';
         }
 
@@ -648,10 +791,21 @@ $page_title = "Listado General de Trazabilidad";
             if (event.target == photoModal) {
                 photoModal.style.display = 'none';
             }
+            if (event.target == document.getElementById('order-detail-modal')) {
+                closeOrderDetailModal();
+            }
+            if (event.target == document.getElementById('materials-modal')) {
+                closeMaterialsModal();
+            }
         }
 
-        // Cerrar con ESC
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePhotoModal(); });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closePhotoModal();
+                closeOrderDetailModal();
+                closeMaterialsModal();
+            }
+        });
 
         // --- Modal de materiales ---
         const materialsModal = document.getElementById('materials-modal');
@@ -663,14 +817,14 @@ $page_title = "Listado General de Trazabilidad";
             materialsContent.innerHTML = '<p class="text-gray-500">Cargando materiales...</p>';
             materialsModal.style.display = 'flex';
             try {
-                const result = await callApi(`trazabilidad/materiales/${parseInt(consecutivoStr,10)}`, 'GET');
+                const result = await callApi(`${API_TRAZABILIDAD_MATERIALES}/${parseInt(consecutivoStr, 10)}`, 'GET');
                 if (result.success && result.data) {
                     renderMaterialsContent(result.data);
                 } else {
                     materialsContent.innerHTML = `<p class="text-red-600">${result.message || 'No fue posible obtener los materiales.'}</p>`;
                 }
             } catch (e) {
-                materialsContent.innerHTML = `<p class="text-red-600">Error de conexión al cargar materiales.</p>`;
+                materialsContent.innerHTML = '<p class="text-red-600">Error de conexión al cargar materiales.</p>';
             }
         }
 
@@ -735,6 +889,127 @@ $page_title = "Listado General de Trazabilidad";
             materialsModal.style.display = 'none';
         }
 
+        // Utilidad: construir URL absoluta para fotos
+        function fullPhotoUrl(path) {
+            if (!path) return '';
+            const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
+            const trimmedBase = base.replace(/\/$/, '');
+            const normalized = path.startsWith('/') ? path : ('/' + path);
+            return trimmedBase + normalized;
+        }
+
+        // Exportar a XLSX usando SheetJS
+        function exportToXLSX() {
+            if (!filteredCache || filteredCache.length === 0) {
+                showMessageModal('Exportación', 'No hay datos para exportar.', 'info');
+                return;
+            }
+            if (typeof XLSX === 'undefined') {
+                showMessageModal('Exportación', 'No se pudo cargar el módulo de Excel. Verifique su conexión.', 'error');
+                return;
+            }
+            const headers = ['CONSECUTIVO', 'ESTADO', 'FECHA', 'OPERARIO', 'PROCESO', 'PRODUCTO', 'CANTIDAD', 'ORO', 'MATERIALES', 'TOTAL', 'RECIBIDO', 'SALDO', 'MERMA'];
+            const ws = XLSX.utils.aoa_to_sheet([headers]);
+            filteredCache.forEach(item => {
+                const estado = item.estado || 'pendiente';
+                const cfg = ESTADO_CONFIG[estado] || ESTADO_CONFIG.pendiente;
+                const oroNum = Number(item.total_oro_entregado) || 0;
+                const matNum = Number(item.total_mat_entregado) || 0;
+                const totalNum = oroNum + matNum;
+                const recibidoNum = (Number(item.total_oro_recibido) || 0) + (Number(item.total_mat_recibido) || 0);
+                const saldoNum = Number(item.saldo_oro) || 0;
+                const rowData = [
+                    String(item.consecutivo).padStart(4, '0'),
+                    cfg.text,
+                    item.fecha_creacion || '',
+                    item.responsable_nombre || '',
+                    item.proceso_nombre || '',
+                    item.producto_nombre || '',
+                    item.cantidad || '',
+                    { t: 'n', v: oroNum, z: '#,##0.00' },
+                    { t: 'n', v: matNum, z: '#,##0.00' },
+                    { t: 'n', v: totalNum, z: '#,##0.00' },
+                    { t: 'n', v: recibidoNum, z: '#,##0.00' },
+                    { t: 'n', v: saldoNum, z: '#,##0.00' },
+                    { t: 'n', v: Number(item.merma) || 0, z: '#,##0.00' }
+                ];
+                XLSX.utils.sheet_add_aoa(ws, [rowData], { origin: -1 });
+            });
+            ws['!cols'] = [
+                { wch: 12 }, { wch: 14 }, { wch: 20 }, { wch: 20 }, { wch: 15 },
+                { wch: 20 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 10 }
+            ];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Trazabilidad');
+            const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const now = new Date();
+            const pad = n => String(n).padStart(2, '0');
+            const fileName = `trazabilidad_${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.xlsx`;
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        window.onload = function () {
+            loadTrazabilidadData(1);
+
+            // Listeners de búsqueda y filtros
+            if (searchInput) {
+                searchInput.addEventListener('input', () => { currentPage = 1; applyFilters(); });
+            }
+            document.getElementById('filter-estado').addEventListener('change', () => { currentPage = 1; applyFilters(); });
+            document.getElementById('filter-operario').addEventListener('change', () => { currentPage = 1; applyFilters(); });
+            document.getElementById('filter-fecha').addEventListener('change', () => { currentPage = 1; applyFilters(); });
+
+            // Listener de Logout
+            document.getElementById('logout-btn').addEventListener('click', async function (e) {
+                e.preventDefault();
+                const result = await callApi('logout', 'GET');
+                if (result.success) {
+                    const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
+                    window.location.href = base;
+                } else {
+                    showMessageModal('Error', 'No se pudo cerrar sesión.', 'error');
+                }
+            });
+
+            // Listener de Exportación
+            if (exportBtn) {
+                exportBtn.addEventListener('click', exportToXLSX);
+            }
+
+            // Habilitar/Deshabilitar exportación según disponibilidad de XLSX
+            const statusEl = document.getElementById('export-status');
+            if (typeof XLSX === 'undefined') {
+                exportBtn.disabled = true;
+                exportBtn.classList.add('opacity-60', 'cursor-not-allowed');
+                if (statusEl) statusEl.style.display = 'inline';
+            } else {
+                exportBtn.disabled = false;
+                exportBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+                if (statusEl) statusEl.style.display = 'none';
+            }
+
+            // Controles de paginación
+            const prevBtn = document.getElementById('prev-page');
+            const nextBtn = document.getElementById('next-page');
+            if (prevBtn && nextBtn) {
+                prevBtn.addEventListener('click', () => {
+                    if (currentPage > 1) { currentPage--; renderRows(filteredCache); }
+                });
+                nextBtn.addEventListener('click', () => {
+                    const totalPagesLocal = Math.max(1, Math.ceil((filteredCache?.length || 0) / pageSize));
+                    if (currentPage < totalPagesLocal) { currentPage++; renderRows(filteredCache); }
+                });
+            }
+        };
+
         // Verificar permisos de administrador al cargar la página
         (async () => {
             try {
@@ -744,7 +1019,6 @@ $page_title = "Listado General de Trazabilidad";
                     method: 'GET',
                     headers: { 'Content-Type': 'application/json' }
                 });
-
                 if (response.ok) {
                     isAdmin = true;
                     console.log('Usuario identificado como administrador');

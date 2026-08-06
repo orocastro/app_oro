@@ -24,7 +24,7 @@ class MaterialController {
             $stmt->execute();
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
             http_response_code(200);
-            echo json_encode(['success' => true, 'data' => $rows]);
+            echo json_encode(['success' => true, 'data' => $rows], JSON_UNESCAPED_UNICODE);
         } catch (PDOException $e) {
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Error al obtener materiales: ' . $e->getMessage()]);
@@ -39,18 +39,18 @@ class MaterialController {
         $protegido = isset($data['protegido']) ? (int)!!$data['protegido'] : 0;
         if ($nombre === '') {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'El nombre es obligatorio.']);
+            echo json_encode(['success' => false, 'message' => 'El nombre es obligatorio.'], JSON_UNESCAPED_UNICODE);
             return;
         }
         try {
             $stmt = $this->db->prepare('INSERT INTO Materiales (nombre, protegido) VALUES (?, ?)');
             $stmt->execute([$nombre, $protegido]);
             http_response_code(201);
-            echo json_encode(['success' => true, 'message' => 'Material creado.', 'id' => $this->db->lastInsertId()]);
+            echo json_encode(['success' => true, 'message' => 'Material creado.', 'id' => $this->db->lastInsertId()], JSON_UNESCAPED_UNICODE);
         } catch (PDOException $e) {
             if ($e->getCode() == '23000') {
                 http_response_code(409);
-                echo json_encode(['success' => false, 'message' => 'El nombre del material ya existe.']);
+                echo json_encode(['success' => false, 'message' => 'El nombre del material ya existe.'], JSON_UNESCAPED_UNICODE);
             } else {
                 http_response_code(500);
                 echo json_encode(['success' => false, 'message' => 'Error al crear material: ' . $e->getMessage()]);
@@ -67,7 +67,7 @@ class MaterialController {
         $protegido = isset($data['protegido']) ? (int)!!$data['protegido'] : null;
         if (empty($id) || $nombre === '' || $protegido === null) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'ID, nombre y protegido son obligatorios.']);
+            echo json_encode(['success' => false, 'message' => 'ID, nombre y protegido son obligatorios.'], JSON_UNESCAPED_UNICODE);
             return;
         }
 
@@ -81,7 +81,7 @@ class MaterialController {
                 $stmt = $this->db->prepare('UPDATE Materiales SET protegido = ? WHERE id = ?');
                 $stmt->execute([$protegido, $id]);
                 http_response_code(200);
-                echo json_encode(['success' => true, 'message' => 'Estado protegido actualizado.']);
+                echo json_encode(['success' => true, 'message' => 'Estado protegido actualizado.'], JSON_UNESCAPED_UNICODE);
                 return;
             }
         } catch (PDOException $e) {}
@@ -91,15 +91,15 @@ class MaterialController {
             $stmt->execute([$nombre, $protegido, $id]);
             if ($stmt->rowCount() == 0) {
                 http_response_code(404);
-                echo json_encode(['success' => false, 'message' => 'Material no encontrado o sin cambios.']);
+                echo json_encode(['success' => false, 'message' => 'Material no encontrado o sin cambios.'], JSON_UNESCAPED_UNICODE);
                 return;
             }
             http_response_code(200);
-            echo json_encode(['success' => true, 'message' => 'Material actualizado.']);
+            echo json_encode(['success' => true, 'message' => 'Material actualizado.'], JSON_UNESCAPED_UNICODE);
         } catch (PDOException $e) {
             if ($e->getCode() == '23000') {
                 http_response_code(409);
-                echo json_encode(['success' => false, 'message' => 'El nombre de material ya existe.']);
+                echo json_encode(['success' => false, 'message' => 'El nombre de material ya existe.'], JSON_UNESCAPED_UNICODE);
             } else {
                 http_response_code(500);
                 echo json_encode(['success' => false, 'message' => 'Error al actualizar material: ' . $e->getMessage()]);
@@ -114,7 +114,7 @@ class MaterialController {
         $id = $data['id'] ?? ($_GET['id'] ?? null);
         if (empty($id)) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'El ID es obligatorio.']);
+            echo json_encode(['success' => false, 'message' => 'El ID es obligatorio.'], JSON_UNESCAPED_UNICODE);
             return;
         }
         // Bloquear eliminación si está en uso o protegido
@@ -124,29 +124,29 @@ class MaterialController {
             $row = $stmtP->fetch(PDO::FETCH_ASSOC);
             if (!$row) {
                 http_response_code(404);
-                echo json_encode(['success' => false, 'message' => 'Material no encontrado.']);
+                echo json_encode(['success' => false, 'message' => 'Material no encontrado.'], JSON_UNESCAPED_UNICODE);
                 return;
             }
             if ((int)$row['protegido'] === 1) {
                 http_response_code(403);
-                echo json_encode(['success' => false, 'message' => 'Material protegido: no se puede eliminar.']);
+                echo json_encode(['success' => false, 'message' => 'Material protegido: no se puede eliminar.'], JSON_UNESCAPED_UNICODE);
                 return;
             }
             $chk = $this->db->prepare('SELECT 1 FROM TrazabilidadMateriales WHERE material_id = ? LIMIT 1');
             $chk->execute([$id]);
             if ($chk->fetch()) {
                 http_response_code(409);
-                echo json_encode(['success' => false, 'message' => 'No se puede eliminar: el material está asociado a trazabilidad.']);
+                echo json_encode(['success' => false, 'message' => 'No se puede eliminar: el material está asociado a trazabilidad.'], JSON_UNESCAPED_UNICODE);
                 return;
             }
             $del = $this->db->prepare('DELETE FROM Materiales WHERE id = ?');
             $del->execute([$id]);
             if ($del->rowCount() > 0) {
                 http_response_code(200);
-                echo json_encode(['success' => true, 'message' => 'Material eliminado.']);
+                echo json_encode(['success' => true, 'message' => 'Material eliminado.'], JSON_UNESCAPED_UNICODE);
             } else {
                 http_response_code(404);
-                echo json_encode(['success' => false, 'message' => 'Material no encontrado.']);
+                echo json_encode(['success' => false, 'message' => 'Material no encontrado.'], JSON_UNESCAPED_UNICODE);
             }
         } catch (PDOException $e) {
             http_response_code(500);

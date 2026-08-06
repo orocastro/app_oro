@@ -13,7 +13,7 @@ class UsuarioController {
             $rol = SessionManager::get('user_rol') ?? 'operador';
             if ($rol !== 'admin') {
                 http_response_code(403);
-                echo json_encode(['success' => false, 'message' => 'Acceso denegado.']);
+                echo json_encode(['success' => false, 'message' => 'Acceso denegado.'], JSON_UNESCAPED_UNICODE);
                 return;
             }
         }
@@ -33,7 +33,7 @@ class UsuarioController {
                 unset($u);
             }
             http_response_code(200);
-            echo json_encode(['success' => true, 'data' => $usuarios]);
+            echo json_encode(['success' => true, 'data' => $usuarios], JSON_UNESCAPED_UNICODE);
         } catch (PDOException $e) {
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Error al listar usuarios: ' . $e->getMessage()]);
@@ -47,7 +47,7 @@ class UsuarioController {
             $rol = SessionManager::get('user_rol') ?? 'operador';
             if ($rol !== 'admin') {
                 http_response_code(403);
-                echo json_encode(['success' => false, 'message' => 'Acceso denegado.']);
+                echo json_encode(['success' => false, 'message' => 'Acceso denegado.'], JSON_UNESCAPED_UNICODE);
                 return;
             }
         }
@@ -58,7 +58,7 @@ class UsuarioController {
 
         if ($nombre === '' || $usuario === '' || $clave === '') {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'Nombre, usuario y clave son obligatorios.']);
+            echo json_encode(['success' => false, 'message' => 'Nombre, usuario y clave son obligatorios.'], JSON_UNESCAPED_UNICODE);
             return;
         }
 
@@ -68,7 +68,7 @@ class UsuarioController {
             $stmt->execute([$usuario]);
             if ($stmt->fetch()) {
                 http_response_code(409);
-                echo json_encode(['success' => false, 'message' => 'El usuario ya existe.']);
+                echo json_encode(['success' => false, 'message' => 'El usuario ya existe.'], JSON_UNESCAPED_UNICODE);
                 return;
             }
 
@@ -77,10 +77,10 @@ class UsuarioController {
             $ok = $stmt->execute([$nombre, $usuario, $hash, $rol]);
             if ($ok) {
                 http_response_code(201);
-                echo json_encode(['success' => true, 'message' => 'Usuario creado correctamente.']);
+                echo json_encode(['success' => true, 'message' => 'Usuario creado correctamente.'], JSON_UNESCAPED_UNICODE);
             } else {
                 http_response_code(500);
-                echo json_encode(['success' => false, 'message' => 'No se pudo crear el usuario.']);
+                echo json_encode(['success' => false, 'message' => 'No se pudo crear el usuario.'], JSON_UNESCAPED_UNICODE);
             }
         } catch (PDOException $e) {
             http_response_code(500);
@@ -95,7 +95,7 @@ class UsuarioController {
             $rolSess = SessionManager::get('user_rol') ?? 'operador';
             if ($rolSess !== 'admin') {
                 http_response_code(403);
-                echo json_encode(['success' => false, 'message' => 'Acceso denegado.']);
+                echo json_encode(['success' => false, 'message' => 'Acceso denegado.'], JSON_UNESCAPED_UNICODE);
                 return;
             }
         }
@@ -107,7 +107,7 @@ class UsuarioController {
 
         if ($id <= 0 || $nombre === '' || $usuario === '') {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'ID, nombre y usuario son obligatorios.']);
+            echo json_encode(['success' => false, 'message' => 'ID, nombre y usuario son obligatorios.'], JSON_UNESCAPED_UNICODE);
             return;
         }
 
@@ -117,7 +117,7 @@ class UsuarioController {
             $stmt->execute([$usuario, $id]);
             if ($stmt->fetch()) {
                 http_response_code(409);
-                echo json_encode(['success' => false, 'message' => 'Ya existe otro usuario con ese correo.']);
+                echo json_encode(['success' => false, 'message' => 'Ya existe otro usuario con ese correo.'], JSON_UNESCAPED_UNICODE);
                 return;
             }
 
@@ -134,7 +134,7 @@ class UsuarioController {
                     $adminCount = (int)($row['c'] ?? 0);
                     if ($adminCount <= 1) {
                         http_response_code(400);
-                        echo json_encode(['success' => false, 'message' => 'No puedes cambiar el rol del único administrador. Debe existir al menos un admin.']);
+                        echo json_encode(['success' => false, 'message' => 'No puedes cambiar el rol del único administrador. Debe existir al menos un admin.'], JSON_UNESCAPED_UNICODE);
                         return;
                     }
                 }
@@ -161,10 +161,10 @@ class UsuarioController {
 
             if ($ok && $stmt->rowCount() >= 0) {
                 http_response_code(200);
-                echo json_encode(['success' => true, 'message' => 'Usuario actualizado correctamente.']);
+                echo json_encode(['success' => true, 'message' => 'Usuario actualizado correctamente.'], JSON_UNESCAPED_UNICODE);
             } else {
                 http_response_code(404);
-                echo json_encode(['success' => false, 'message' => 'Usuario no encontrado.']);
+                echo json_encode(['success' => false, 'message' => 'Usuario no encontrado.'], JSON_UNESCAPED_UNICODE);
             }
         } catch (PDOException $e) {
             http_response_code(500);
@@ -179,14 +179,14 @@ class UsuarioController {
             $rol = SessionManager::get('user_rol') ?? 'operador';
             if ($rol !== 'admin') {
                 http_response_code(403);
-                echo json_encode(['success' => false, 'message' => 'Acceso denegado.']);
+                echo json_encode(['success' => false, 'message' => 'Acceso denegado.'], JSON_UNESCAPED_UNICODE);
                 return;
             }
         }
         $id = isset($data['id']) ? (int)$data['id'] : 0;
         if ($id <= 0) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'ID inválido.']);
+            echo json_encode(['success' => false, 'message' => 'ID inválido.'], JSON_UNESCAPED_UNICODE);
             return;
         }
 
@@ -195,7 +195,7 @@ class UsuarioController {
             $selfId = (int)(SessionManager::get('user_id') ?? 0);
             if ($selfId === $id) {
                 http_response_code(400);
-                echo json_encode(['success' => false, 'message' => 'No puedes eliminar tu propio usuario.']);
+                echo json_encode(['success' => false, 'message' => 'No puedes eliminar tu propio usuario.'], JSON_UNESCAPED_UNICODE);
                 return;
             }
         }
@@ -212,7 +212,7 @@ class UsuarioController {
                 $adminCount = (int)($row['c'] ?? 0);
                 if ($adminCount <= 1) {
                     http_response_code(400);
-                    echo json_encode(['success' => false, 'message' => 'No puedes eliminar al único administrador. Crea otro admin antes.']);
+                    echo json_encode(['success' => false, 'message' => 'No puedes eliminar al único administrador. Crea otro admin antes.'], JSON_UNESCAPED_UNICODE);
                     return;
                 }
             }
@@ -220,10 +220,10 @@ class UsuarioController {
             $ok = $stmt->execute([$id]);
             if ($ok && $stmt->rowCount() > 0) {
                 http_response_code(200);
-                echo json_encode(['success' => true, 'message' => 'Usuario eliminado correctamente.']);
+                echo json_encode(['success' => true, 'message' => 'Usuario eliminado correctamente.'], JSON_UNESCAPED_UNICODE);
             } else {
                 http_response_code(404);
-                echo json_encode(['success' => false, 'message' => 'Usuario no encontrado.']);
+                echo json_encode(['success' => false, 'message' => 'Usuario no encontrado.'], JSON_UNESCAPED_UNICODE);
             }
         } catch (PDOException $e) {
             http_response_code(500);

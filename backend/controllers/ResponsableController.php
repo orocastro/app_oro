@@ -35,7 +35,7 @@ class ResponsableController {
             $responsables = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             http_response_code(200);
-            echo json_encode(['success' => true, 'data' => $responsables]);
+            echo json_encode(['success' => true, 'data' => $responsables], JSON_UNESCAPED_UNICODE);
         } catch (PDOException $e) {
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => "Error al obtener responsables: " . $e->getMessage()]);
@@ -52,7 +52,7 @@ class ResponsableController {
             $rol = SessionManager::get('user_rol') ?? 'operador';
             if ($rol !== 'admin') {
                 http_response_code(403);
-                echo json_encode(['success' => false, 'message' => 'Acceso denegado. Solo administradores pueden gestionar responsables.']);
+                echo json_encode(['success' => false, 'message' => 'Acceso denegado. Solo administradores pueden gestionar responsables.'], JSON_UNESCAPED_UNICODE);
                 return;
             }
         }
@@ -61,7 +61,7 @@ class ResponsableController {
 
         if (empty($nombre)) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'El nombre del responsable es obligatorio.']);
+            echo json_encode(['success' => false, 'message' => 'El nombre del responsable es obligatorio.'], JSON_UNESCAPED_UNICODE);
             return;
         }
 
@@ -71,12 +71,12 @@ class ResponsableController {
 
             $new_id = $this->db->lastInsertId();
             http_response_code(201); // Created
-            echo json_encode(['success' => true, 'message' => 'Responsable creado exitosamente.', 'id' => $new_id, 'nombre' => $nombre]);
+            echo json_encode(['success' => true, 'message' => 'Responsable creado exitosamente.', 'id' => $new_id, 'nombre' => $nombre], JSON_UNESCAPED_UNICODE);
         } catch (PDOException $e) {
             // Error 23000 es usualmente una violación de restricción única (nombre duplicado)
             if ($e->getCode() == '23000') {
                 http_response_code(409); // Conflict
-                echo json_encode(['success' => false, 'message' => 'El nombre del responsable ya existe.']);
+                echo json_encode(['success' => false, 'message' => 'El nombre del responsable ya existe.'], JSON_UNESCAPED_UNICODE);
             } else {
                 http_response_code(500);
                 echo json_encode(['success' => false, 'message' => "Error al crear responsable: " . $e->getMessage()]);
@@ -94,7 +94,7 @@ class ResponsableController {
             $rol = SessionManager::get('user_rol') ?? 'operador';
             if ($rol !== 'admin') {
                 http_response_code(403);
-                echo json_encode(['success' => false, 'message' => 'Acceso denegado. Solo administradores pueden gestionar responsables.']);
+                echo json_encode(['success' => false, 'message' => 'Acceso denegado. Solo administradores pueden gestionar responsables.'], JSON_UNESCAPED_UNICODE);
                 return;
             }
         }
@@ -104,7 +104,7 @@ class ResponsableController {
 
         if (empty($id) || empty($nombre)) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'ID y nombre son obligatorios para actualizar.']);
+            echo json_encode(['success' => false, 'message' => 'ID y nombre son obligatorios para actualizar.'], JSON_UNESCAPED_UNICODE);
             return;
         }
 
@@ -114,7 +114,7 @@ class ResponsableController {
             $chk->execute([$id]);
             if ($chk->fetch()) {
                 http_response_code(403);
-                echo json_encode(['success' => false, 'message' => 'No se puede editar: el responsable está asociado a trazabilidad.']);
+                echo json_encode(['success' => false, 'message' => 'No se puede editar: el responsable está asociado a trazabilidad.'], JSON_UNESCAPED_UNICODE);
                 return;
             }
         } catch (PDOException $e) {}
@@ -125,16 +125,16 @@ class ResponsableController {
 
             if ($stmt->rowCount() == 0) {
                 http_response_code(404);
-                echo json_encode(['success' => false, 'message' => 'Responsable no encontrado o no se realizaron cambios.']);
+                echo json_encode(['success' => false, 'message' => 'Responsable no encontrado o no se realizaron cambios.'], JSON_UNESCAPED_UNICODE);
                 return;
             }
 
             http_response_code(200);
-            echo json_encode(['success' => true, 'message' => 'Responsable actualizado exitosamente.']);
+            echo json_encode(['success' => true, 'message' => 'Responsable actualizado exitosamente.'], JSON_UNESCAPED_UNICODE);
         } catch (PDOException $e) {
             if ($e->getCode() == '23000') {
                 http_response_code(409); // Conflict
-                echo json_encode(['success' => false, 'message' => 'El nombre del responsable ya existe.']);
+                echo json_encode(['success' => false, 'message' => 'El nombre del responsable ya existe.'], JSON_UNESCAPED_UNICODE);
             } else {
                 http_response_code(500);
                 echo json_encode(['success' => false, 'message' => "Error al actualizar responsable: " . $e->getMessage()]);
@@ -152,7 +152,7 @@ class ResponsableController {
             $rol = SessionManager::get('user_rol') ?? 'operador';
             if ($rol !== 'admin') {
                 http_response_code(403);
-                echo json_encode(['success' => false, 'message' => 'Acceso denegado. Solo administradores pueden gestionar responsables.']);
+                echo json_encode(['success' => false, 'message' => 'Acceso denegado. Solo administradores pueden gestionar responsables.'], JSON_UNESCAPED_UNICODE);
                 return;
             }
         }
@@ -167,7 +167,7 @@ class ResponsableController {
 
         if (empty($id)) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'El ID del responsable es obligatorio para eliminar.']);
+            echo json_encode(['success' => false, 'message' => 'El ID del responsable es obligatorio para eliminar.'], JSON_UNESCAPED_UNICODE);
             return;
         }
 
@@ -177,7 +177,7 @@ class ResponsableController {
             $chk->execute([$id]);
             if ($chk->fetch()) {
                 http_response_code(409);
-                echo json_encode(['success' => false, 'message' => 'No se puede eliminar: el responsable está asociado a trazabilidad.']);
+                echo json_encode(['success' => false, 'message' => 'No se puede eliminar: el responsable está asociado a trazabilidad.'], JSON_UNESCAPED_UNICODE);
                 return;
             }
         } catch (PDOException $e) {}
@@ -188,16 +188,16 @@ class ResponsableController {
 
             if ($stmt->rowCount() > 0) {
                 http_response_code(200);
-                echo json_encode(['success' => true, 'message' => 'Responsable eliminado exitosamente.']);
+                echo json_encode(['success' => true, 'message' => 'Responsable eliminado exitosamente.'], JSON_UNESCAPED_UNICODE);
             } else {
                 http_response_code(404);
-                echo json_encode(['success' => false, 'message' => 'Responsable no encontrado.']);
+                echo json_encode(['success' => false, 'message' => 'Responsable no encontrado.'], JSON_UNESCAPED_UNICODE);
             }
         } catch (PDOException $e) {
             // Error 23000 es usualmente una violación de clave foránea (el responsable está en uso)
             if ($e->getCode() == '23000') {
                  http_response_code(409); // Conflict
-                 echo json_encode(['success' => false, 'message' => 'No se puede eliminar: El responsable está asociado a un registro de trazabilidad.']);
+                 echo json_encode(['success' => false, 'message' => 'No se puede eliminar: El responsable está asociado a un registro de trazabilidad.'], JSON_UNESCAPED_UNICODE);
             } else {
                 http_response_code(500);
                 echo json_encode(['success' => false, 'message' => "Error al eliminar responsable: " . $e->getMessage()]);

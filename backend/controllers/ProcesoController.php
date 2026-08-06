@@ -32,7 +32,7 @@ class ProcesoController {
             $procesos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             http_response_code(200);
-            echo json_encode(['success' => true, 'data' => $procesos]);
+            echo json_encode(['success' => true, 'data' => $procesos], JSON_UNESCAPED_UNICODE);
         } catch (PDOException $e) {
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => "Error al obtener procesos: " . $e->getMessage()]);
@@ -48,7 +48,7 @@ class ProcesoController {
 
         if (empty($nombre)) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'El nombre del proceso es obligatorio.']);
+            echo json_encode(['success' => false, 'message' => 'El nombre del proceso es obligatorio.'], JSON_UNESCAPED_UNICODE);
             return;
         }
 
@@ -58,12 +58,12 @@ class ProcesoController {
 
             $new_id = $this->db->lastInsertId();
             http_response_code(201); // Created
-            echo json_encode(['success' => true, 'message' => 'Proceso creado exitosamente.', 'id' => $new_id, 'nombre' => $nombre]);
+            echo json_encode(['success' => true, 'message' => 'Proceso creado exitosamente.', 'id' => $new_id, 'nombre' => $nombre], JSON_UNESCAPED_UNICODE);
         } catch (PDOException $e) {
             // Error 23000 es usualmente una violación de restricción única (nombre duplicado)
             if ($e->getCode() == '23000') {
                 http_response_code(409); // Conflict
-                echo json_encode(['success' => false, 'message' => 'El nombre del proceso ya existe.']);
+                echo json_encode(['success' => false, 'message' => 'El nombre del proceso ya existe.'], JSON_UNESCAPED_UNICODE);
             } else {
                 http_response_code(500);
                 echo json_encode(['success' => false, 'message' => "Error al crear proceso: " . $e->getMessage()]);
@@ -81,14 +81,14 @@ class ProcesoController {
 
         if (empty($id) || empty($nombre)) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'ID y nombre son obligatorios para actualizar.']);
+            echo json_encode(['success' => false, 'message' => 'ID y nombre son obligatorios para actualizar.'], JSON_UNESCAPED_UNICODE);
             return;
         }
 
         // Proteger registros críticos por ID
         if (in_array((int)$id, $this->protectedIds, true)) {
             http_response_code(403); // Forbidden
-            echo json_encode(['success' => false, 'message' => 'Este proceso está protegido y no puede editarse.']);
+            echo json_encode(['success' => false, 'message' => 'Este proceso está protegido y no puede editarse.'], JSON_UNESCAPED_UNICODE);
             return;
         }
 
@@ -98,7 +98,7 @@ class ProcesoController {
             $chk->execute([$id]);
             if ($chk->fetch()) {
                 http_response_code(403);
-                echo json_encode(['success' => false, 'message' => 'No se puede editar: el proceso ya está asociado a registros de trazabilidad.']);
+                echo json_encode(['success' => false, 'message' => 'No se puede editar: el proceso ya está asociado a registros de trazabilidad.'], JSON_UNESCAPED_UNICODE);
                 return;
             }
         } catch (PDOException $e) {
@@ -111,16 +111,16 @@ class ProcesoController {
 
             if ($stmt->rowCount() == 0) {
                 http_response_code(404);
-                echo json_encode(['success' => false, 'message' => 'Proceso no encontrado o no se realizaron cambios.']);
+                echo json_encode(['success' => false, 'message' => 'Proceso no encontrado o no se realizaron cambios.'], JSON_UNESCAPED_UNICODE);
                 return;
             }
 
             http_response_code(200);
-            echo json_encode(['success' => true, 'message' => 'Proceso actualizado exitosamente.']);
+            echo json_encode(['success' => true, 'message' => 'Proceso actualizado exitosamente.'], JSON_UNESCAPED_UNICODE);
         } catch (PDOException $e) {
             if ($e->getCode() == '23000') {
                 http_response_code(409); // Conflict
-                echo json_encode(['success' => false, 'message' => 'El nombre del proceso ya existe.']);
+                echo json_encode(['success' => false, 'message' => 'El nombre del proceso ya existe.'], JSON_UNESCAPED_UNICODE);
             } else {
                 http_response_code(500);
                 echo json_encode(['success' => false, 'message' => "Error al actualizar proceso: " . $e->getMessage()]);
@@ -142,14 +142,14 @@ class ProcesoController {
 
         if (empty($id)) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'El ID del proceso es obligatorio para eliminar.']);
+            echo json_encode(['success' => false, 'message' => 'El ID del proceso es obligatorio para eliminar.'], JSON_UNESCAPED_UNICODE);
             return;
         }
 
         // Proteger registros críticos por ID
         if (in_array((int)$id, $this->protectedIds, true)) {
             http_response_code(403); // Forbidden
-            echo json_encode(['success' => false, 'message' => 'Este proceso está protegido y no puede eliminarse.']);
+            echo json_encode(['success' => false, 'message' => 'Este proceso está protegido y no puede eliminarse.'], JSON_UNESCAPED_UNICODE);
             return;
         }
 
@@ -159,7 +159,7 @@ class ProcesoController {
             $chk->execute([$id]);
             if ($chk->fetch()) {
                 http_response_code(409); // Conflict
-                echo json_encode(['success' => false, 'message' => 'No se puede eliminar: el proceso está asociado a registros de trazabilidad.']);
+                echo json_encode(['success' => false, 'message' => 'No se puede eliminar: el proceso está asociado a registros de trazabilidad.'], JSON_UNESCAPED_UNICODE);
                 return;
             }
         } catch (PDOException $e) {
@@ -172,16 +172,16 @@ class ProcesoController {
 
             if ($stmt->rowCount() > 0) {
                 http_response_code(200);
-                echo json_encode(['success' => true, 'message' => 'Proceso eliminado exitosamente.']);
+                echo json_encode(['success' => true, 'message' => 'Proceso eliminado exitosamente.'], JSON_UNESCAPED_UNICODE);
             } else {
                 http_response_code(404);
-                echo json_encode(['success' => false, 'message' => 'Proceso no encontrado.']);
+                echo json_encode(['success' => false, 'message' => 'Proceso no encontrado.'], JSON_UNESCAPED_UNICODE);
             }
         } catch (PDOException $e) {
             // Error 23000 es usualmente una violación de clave foránea (el proceso está en uso)
             if ($e->getCode() == '23000') {
                  http_response_code(409); // Conflict
-                 echo json_encode(['success' => false, 'message' => 'No se puede eliminar: El proceso está asociado a un registro de trazabilidad.']);
+                 echo json_encode(['success' => false, 'message' => 'No se puede eliminar: El proceso está asociado a un registro de trazabilidad.'], JSON_UNESCAPED_UNICODE);
             } else {
                 http_response_code(500);
                 echo json_encode(['success' => false, 'message' => "Error al eliminar proceso: " . $e->getMessage()]);

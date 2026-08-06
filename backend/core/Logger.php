@@ -16,7 +16,7 @@ class Logger {
         $ts = date('Y-m-d H:i:s');
         // Sanitizar contexto y evitar volcar contraseñas
         if (isset($context['clave'])) { $context['clave'] = '***'; }
-        $line = sprintf("[%s] %s %s %s\n", $ts, strtoupper($level), $message, $context ? json_encode($context) : '');
+        $line = sprintf("[%s] %s %s %s\n", $ts, strtoupper($level), $message, $context ? json_encode($context, JSON_UNESCAPED_UNICODE) : '');
         @file_put_contents($file, $line, FILE_APPEND | LOCK_EX);
     }
 

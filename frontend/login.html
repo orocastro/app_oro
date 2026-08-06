@@ -8,6 +8,19 @@ $page_title = "Login | Trazabilidad";
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $page_title; ?></title>
+    <!-- Redirección si se abre directamente sin pasar por index.php -->
+    <script>
+        // Si BASE_URL no está definido, significa que se abrió el archivo directamente
+        if (typeof window.BASE_URL === 'undefined') {
+            // Calcular la ruta base dinámicamente
+            var path = window.location.pathname;
+            // Si contiene /frontend/login.html, redirigir a la raíz de la app
+            if (path.includes('/frontend/login.html')) {
+                var appRoot = path.substring(0, path.indexOf('/frontend/login.html'));
+                window.location.href = appRoot + '/';
+            }
+        }
+    </script>
     <!-- Incluimos los estilos base -->
     <link rel="stylesheet" href="<?php echo $base_url; ?>frontend/assets/css/styles.css">
 </head>
@@ -31,8 +44,8 @@ $page_title = "Login | Trazabilidad";
             <h2 class="text-2xl font-semibold mb-6 text-center text-gray-700">Acceso al Sistema</h2>
             <form id="login-form">
                 <div class="mb-4">
-                    <label for="usuario" class="block text-gray-700 font-medium mb-2">Usuario (Correo)</label>
-                    <input type="email" id="usuario" name="usuario" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600" required>
+                    <label for="usuario" class="block text-gray-700 font-medium mb-2">Usuario</label>
+                    <input type="text" id="usuario" name="usuario" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600" required placeholder="Ej: admin">
                 </div>
                 <div class="mb-6">
                     <label for="clave" class="block text-gray-700 font-medium mb-2">Clave</label>
@@ -50,11 +63,11 @@ $page_title = "Login | Trazabilidad";
         <!-- VISTA DE RECUPERACIÓN (Oculta inicialmente) -->
         <div id="recover-view" class="bg-white p-8 rounded-lg shadow-xl form-card hidden">
             <h2 class="text-2xl font-semibold mb-6 text-center text-gray-700">Recuperar Contraseña</h2>
-            <p class="text-gray-600 mb-4 text-sm">Ingresa tu correo electrónico para enviarte un enlace de restablecimiento.</p>
+            <p class="text-gray-600 mb-4 text-sm">Ingresa tu usuario para enviarte un enlace de restablecimiento.</p>
             <form id="recover-form">
                 <div class="mb-4">
-                    <label for="recover-usuario" class="block text-gray-700 font-medium mb-2">Usuario (Correo)</label>
-                    <input type="email" id="recover-usuario" name="usuario" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600" required>
+                    <label for="recover-usuario" class="block text-gray-700 font-medium mb-2">Usuario</label>
+                    <input type="text" id="recover-usuario" name="usuario" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600" required placeholder="Ej: admin">
                 </div>
                 <button type="submit" class="w-full btn-primary shadow-lg mb-4">
                     ENVIAR ENLACE
