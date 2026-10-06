@@ -118,6 +118,11 @@ if (strpos($request_uri, 'api/') === 0) {
     $router->post('usuarios', 'UsuarioController@create');
     $router->put('usuarios', 'UsuarioController@update');
     $router->delete('usuarios', 'UsuarioController@delete');
+    $router->post('usuarios/{id}/reset-clave', 'UsuarioController@resetClave');
+
+    // Reportes (merma por responsable / proceso / producto)
+    require_once __DIR__ . '/backend/controllers/ReporteController.php';
+    $router->get('reportes/merma', 'ReporteController@getMermaReport');
 
     // Paso 9/10/11: Lógica de Trazabilidad (Fase 2: Ordenes + Movimientos)
     require_once __DIR__ . '/backend/controllers/TrazabilidadController.php';
@@ -125,9 +130,23 @@ if (strpos($request_uri, 'api/') === 0) {
     // --- Nuevas rutas de Ordenes ---
     $router->get('ordenes', 'TrazabilidadController@index');
     $router->post('ordenes', 'TrazabilidadController@createOrden');
+    $router->get('ordenes/abiertas', 'TrazabilidadController@getOrdenesAbiertas');
+    // Ruta estática: debe ir ANTES de 'ordenes/{consecutivo}' para no ser capturada como consecutivo
+    $router->get('ordenes/bandeja', 'TrazabilidadController@getBandeja');
+    $router->post('ordenes/{consecutivo}/cerrar', 'TrazabilidadController@cerrarOrden');
     $router->get('ordenes/{consecutivo}/movimientos', 'TrazabilidadController@getMovimientosByConsecutivo');
     $router->get('ordenes/{consecutivo}', 'TrazabilidadController@getByConsecutivo');
+    $router->delete('ordenes/{consecutivo}', 'TrazabilidadController@delete');
     $router->post('movimientos', 'TrazabilidadController@registerMovimiento');
+
+    // --- Fase 2: Anexar productos a una orden (creador de la orden o admin) ---
+    $router->post('ordenes/{consecutivo}/productos', 'TrazabilidadController@anexarProducto');
+
+    // --- Fase 3: Edición de movimientos con aprobación del admin ---
+    $router->post('movimientos/{id}/solicitar-edicion', 'TrazabilidadController@solicitarEdicionMovimiento');
+    $router->get('ediciones/pendientes', 'TrazabilidadController@getEdicionesPendientes');
+    $router->post('ediciones/{id}/aprobar', 'TrazabilidadController@aprobarEdicion');
+    $router->post('ediciones/{id}/rechazar', 'TrazabilidadController@rechazarEdicion');
 
     // --- Rutas legacy (compatibilidad hacia atrás) ---
     // La ruta estática 'trazabilidad' debe ir ANTES de la dinámica 'trazabilidad/{consecutivo}'
@@ -170,6 +189,8 @@ $view_map = [
     'trazabilidad_list' => 'trazabilidad_list.html', // Nueva ruta de vista
     'trazabilidad_edit' => 'trazabilidad_edit.html', // Nueva vista de edición (solo admin)
     'materiales' => 'materiales.html',
+    'reportes' => 'reportes.html',
+    'bandeja' => 'bandeja.html',
 ];
 
 // Si la URL es la raíz o home, y el usuario no está logueado, forzar a login.

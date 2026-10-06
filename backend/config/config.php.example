@@ -1,0 +1,19 @@
+<?php
+/**
+ * Plantilla de configuración — copiar este archivo como config.php
+ * y ajustar los valores de tu entorno.
+ *
+ * En producción se recomienda definir las variables por entorno:
+ *   DB_HOST, DB_NAME, DB_USER, DB_PASSWORD, APP_DEBUG
+ */
+
+define('DB_HOST',     getenv('DB_HOST')     ?: 'localhost');
+define('DB_NAME',     getenv('DB_NAME')     ?: 'trazabilidad');
+define('DB_USER',     getenv('DB_USER')     ?: 'root');
+define('DB_PASSWORD', getenv('DB_PASSWORD') ?: '');
+
+// Modo debug: true solo en desarrollo local
+define('APP_DEBUG',   getenv('APP_DEBUG')   ?: false);
+
+// Nombre de la cookie de sesión
+define('SESSION_NAME', 'app_oro_session');

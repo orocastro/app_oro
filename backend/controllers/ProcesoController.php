@@ -17,6 +17,22 @@ class ProcesoController {
     }
 
     /**
+     * Verifica que el usuario autenticado sea administrador.
+     * Si no lo es, responde 403 y devuelve false.
+     */
+    private function requiereAdmin() {
+        if (class_exists('SessionManager')) {
+            $rol = SessionManager::get('user_rol') ?? 'operador';
+            if ($rol !== 'admin') {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'message' => 'Acceso denegado. Solo administradores.'], JSON_UNESCAPED_UNICODE);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * Devuelve todos los procesos (GET /api/procesos).
      * @param array $data Datos de la petición (usualmente vacíos para GET all).
      */
@@ -44,6 +60,7 @@ class ProcesoController {
      * @param array $data Datos recibidos en el cuerpo de la petición (debe contener 'nombre').
      */
     public function create($data) {
+        if (!$this->requiereAdmin()) { return; }
         $nombre = $data['nombre'] ?? '';
 
         if (empty($nombre)) {
@@ -76,6 +93,7 @@ class ProcesoController {
      * @param array $data Datos recibidos (debe contener 'id' y 'nombre').
      */
     public function update($data) {
+        if (!$this->requiereAdmin()) { return; }
         $id = $data['id'] ?? null;
         $nombre = $data['nombre'] ?? '';
 
@@ -133,6 +151,7 @@ class ProcesoController {
      * @param array $data Datos recibidos (debe contener 'id').
      */
     public function delete($data) {
+        if (!$this->requiereAdmin()) { return; }
         $id = $data['id'] ?? null;
         
         // La data para DELETE puede venir en el cuerpo o en la URL

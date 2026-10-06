@@ -1,9 +1,30 @@
 # Logs
 /logs/*.log
+server.log
 
-# Uploads (keep placeholder)
+# Uploads (fotos de la operación — nunca al repo)
 /frontend/assets/img/**
 !/frontend/assets/img/.gitkeep
+
+# Credenciales y configuración local (usar config.php.example como plantilla)
+/backend/config/config.php
+/backend/config/db_hostinger.php
+/backend/config/db_.php
+
+# Copias y respaldos que no se versionan
+/backend/backend/
+/backend_backup/
+/demo/
+
+# Dumps de base de datos (pueden contener datos reales)
+/*.sql
+/sql/*.sql
+
+# Archivos de prueba/despliegue local
+test.php
+install_xampp.bat
+start_server.bat
+server_*.js
 
 # OS files
 .DS_Store

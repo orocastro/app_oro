@@ -1,0 +1,845 @@
+<?php
+// PHP include file. Requiere que $base_url esté definido en index.php
+require_once __DIR__ . '/../backend/controllers/AuthController.php';
+// Protección de ruta: Si no está logueado, redirigir al login
+if (!SessionManager::get('logged_in')) {
+    header('Location: ' . $base_url);
+    exit();
+}
+$page_title = "Reportes de Merma";
+?>
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+        <?php echo $page_title; ?>
+    </title>
+    <link rel="stylesheet" href="<?php echo $base_url; ?>frontend/assets/css/styles.css">
+    <style>
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: flex-end;
+            margin-bottom: 1rem;
+        }
+
+        .filter-bar .filter-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .filter-bar label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #6b7c78;
+        }
+
+        .filter-bar select,
+        .filter-bar input[type="date"] {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            background-color: white;
+            min-height: 44px;
+        }
+
+        /* Tarjetas KPI */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+
+        @media (min-width: 768px) {
+            .kpi-grid {
+                grid-template-columns: repeat(5, minmax(0, 1fr));
+            }
+        }
+
+        .kpi-card {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 0.875rem 1rem;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .kpi-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #6b7c78;
+            margin-bottom: 0.25rem;
+        }
+
+        .kpi-value {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #22302E;
+            line-height: 1.2;
+        }
+
+        .kpi-value.kpi-rojo { color: #b91c1c; }
+        .kpi-value.kpi-verde { color: #065f46; }
+
+        /* Contenedores de gráficas */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (min-width: 1024px) {
+            .charts-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        .chart-card {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .chart-card h3 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #22302E;
+            margin-bottom: 0.75rem;
+        }
+
+        .chart-box {
+            position: relative;
+            height: 300px;
+        }
+
+        .sin-datos {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 300px;
+            color: #6b7c78;
+            font-size: 0.9rem;
+            background: #f9fafb;
+            border-radius: 0.375rem;
+        }
+
+        /* Tablas */
+        .table-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .table-section h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #22302E;
+            margin-bottom: 0.5rem;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            max-width: 100%;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+        }
+
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 720px;
+        }
+
+        .report-table th,
+        .report-table td {
+            padding: 8px 10px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 0.875rem;
+            white-space: nowrap;
+        }
+
+        .report-table th {
+            background-color: #234B46;
+            color: #ffffff;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+        }
+
+        .report-table td.num,
+        .report-table th.num {
+            text-align: right;
+        }
+
+        .report-table tr:nth-child(even) { background-color: #f9fafb; }
+        .report-table tr:hover { background-color: #f3f4f6; }
+
+        /* Top 3 de merma: fondo rojo suave */
+        .report-table tr.row-merma-alta {
+            background-color: #fdecec;
+        }
+
+        .report-table tr.row-merma-alta:hover {
+            background-color: #fbdcdc;
+        }
+
+        .merma-pos { color: #b91c1c; font-weight: 700; }
+        .merma-neg { color: #065f46; font-weight: 700; }
+
+        #acceso-restringido {
+            display: none;
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            color: #92400e;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        /* Botón secundario (Exportar PDF / Atrás) */
+        .btn-secondary {
+            background: #6b7c78;
+            color: #ffffff;
+            font-weight: 700;
+            border: none;
+            border-radius: 0.375rem;
+            padding: 12px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            min-height: 44px;
+            line-height: 1.2;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .btn-secondary:hover:not(:disabled) { filter: brightness(.95); }
+
+        .btn-secondary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-200 flex flex-col min-h-screen">
+
+    <!-- Navbar/Header -->
+    <header
+        class="fixed top-0 left-0 right-0 p-4 shadow-md text-white z-10 flex justify-between items-center flex-wrap gap-2">
+        <h1 class="text-xl font-bold accent-underline">Reportes de Merma</h1>
+        <nav class="flex flex-wrap gap-3 text-sm items-center">
+            <a href="<?php echo $base_url; ?>home" class="btn-back hover:opacity-90" title="Regresar" aria-label="Regresar"><span
+                    class="icon icon-lg icon-gold" aria-hidden="true"><svg viewBox="0 0 24 24" width="1em" height="1em"
+                        fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></span></a>
+            <span class="hidden sm:inline">Hola,
+                <?php echo htmlspecialchars(SessionManager::get('user_nombre') ?? 'Usuario'); ?>
+            </span>
+            <a href="<?php echo $base_url; ?>home" class="hover:opacity-90" title="Inicio" aria-label="Inicio"><span
+                    class="icon icon-lg icon-gold" aria-hidden="true"><svg viewBox="0 0 24 24" width="1em" height="1em"
+                        fill="currentColor">
+                        <path d="M12 3l10 9h-3v9h-5v-6H10v6H5v-9H2l10-9z" />
+                    </svg></span></a>
+            <a href="#" id="logout-btn" class="hover:opacity-90" title="Cerrar sesión" aria-label="Cerrar sesión"><span
+                    aria-hidden="true" class="icon icon-lg icon-gold">⭕</span></a>
+        </nav>
+    </header>
+
+    <!-- Contenedor Principal de la Aplicación -->
+    <main id="app-content" class="container mx-auto p-4 mt-20 flex-grow">
+        <div class="bg-white p-6 rounded-lg shadow-xl form-card">
+
+            <div class="flex items-center gap-2 mb-4">
+                <a href="<?php echo $base_url; ?>home" class="btn-secondary px-3 py-1 text-sm inline-flex items-center gap-1">
+                    <span>←</span> Atrás
+                </a>
+            </div>
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Reportes de Merma</h2>
+
+            <div id="acceso-restringido">Acceso restringido: solo administrador o usuarios autorizados.</div>
+
+            <div id="reporte-contenido">
+                <!-- Barra de filtros -->
+                <div class="filter-bar">
+                    <div class="filter-field">
+                        <label for="filtro-desde">Desde</label>
+                        <input type="date" id="filtro-desde">
+                    </div>
+                    <div class="filter-field">
+                        <label for="filtro-hasta">Hasta</label>
+                        <input type="date" id="filtro-hasta">
+                    </div>
+                    <div class="filter-field">
+                        <label for="filtro-responsable">Responsable</label>
+                        <select id="filtro-responsable">
+                            <option value="">Todos los responsables</option>
+                        </select>
+                    </div>
+                    <div class="filter-field">
+                        <label for="filtro-proceso">Proceso</label>
+                        <select id="filtro-proceso">
+                            <option value="">Todos los procesos</option>
+                        </select>
+                    </div>
+                    <button type="button" id="btn-generar" class="btn-primary px-4 py-2">Generar reporte</button>
+                    <button type="button" id="btn-exportar-pdf" class="btn-secondary px-4 py-2" disabled
+                        title="Genere primero el reporte">Exportar PDF</button>
+                </div>
+
+                <!-- Tarjetas KPI -->
+                <div class="kpi-grid" id="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-label">Total Entregado (gr)</div>
+                        <div class="kpi-value" id="kpi-entregado">-</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Total Devuelto (gr)</div>
+                        <div class="kpi-value" id="kpi-devuelto">-</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Merma (gr)</div>
+                        <div class="kpi-value" id="kpi-merma">-</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Merma %</div>
+                        <div class="kpi-value" id="kpi-merma-pct">-</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Nº Órdenes</div>
+                        <div class="kpi-value" id="kpi-ordenes">-</div>
+                    </div>
+                </div>
+
+                <!-- Gráficas -->
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3>Merma por persona (gr)</h3>
+                        <div class="chart-box" id="chart-responsable-box">
+                            <canvas id="chart-responsable"></canvas>
+                        </div>
+                        <div class="sin-datos" id="sin-datos-responsable" style="display:none;">Sin datos</div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Merma por proceso (gr)</h3>
+                        <div class="chart-box" id="chart-proceso-box">
+                            <canvas id="chart-proceso"></canvas>
+                        </div>
+                        <div class="sin-datos" id="sin-datos-proceso" style="display:none;">Sin datos</div>
+                    </div>
+                </div>
+
+                <!-- Tabla principal: personas con más merma -->
+                <div class="table-section">
+                    <h3>Personas con más merma</h3>
+                    <div class="table-container">
+                        <table class="report-table" id="tabla-responsable">
+                            <thead>
+                                <tr>
+                                    <th>Responsable</th>
+                                    <th class="num">Oro Entregado</th>
+                                    <th class="num">Oro Devuelto</th>
+                                    <th class="num">Materiales Ent.</th>
+                                    <th class="num">Materiales Dev.</th>
+                                    <th class="num">Merma (gr)</th>
+                                    <th class="num">Merma %</th>
+                                    <th class="num">Órdenes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-responsable">
+                                <tr>
+                                    <td colspan="8" class="text-center text-gray-500">Cargando datos...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tabla: merma por proceso -->
+                <div class="table-section">
+                    <h3>Merma por proceso</h3>
+                    <div class="table-container">
+                        <table class="report-table" id="tabla-proceso">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th class="num">Entregado</th>
+                                    <th class="num">Devuelto</th>
+                                    <th class="num">Merma (gr)</th>
+                                    <th class="num">Merma %</th>
+                                    <th class="num">Órdenes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-proceso">
+                                <tr>
+                                    <td colspan="6" class="text-center text-gray-500">Cargando datos...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tabla: merma por producto -->
+                <div class="table-section">
+                    <h3>Merma por producto</h3>
+                    <div class="table-container">
+                        <table class="report-table" id="tabla-producto">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th class="num">Entregado</th>
+                                    <th class="num">Devuelto</th>
+                                    <th class="num">Merma (gr)</th>
+                                    <th class="num">Merma %</th>
+                                    <th class="num">Órdenes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-producto">
+                                <tr>
+                                    <td colspan="6" class="text-center text-gray-500">Cargando datos...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="p-4 text-center text-gray-500 text-sm">
+        Sistema de Trazabilidad &copy;
+        <?php echo date('Y'); ?> -
+        by <a href="mailto:ganoderico@gmail.com" class="inline-flex items-center gap-0.5" title="Escribir a vibo"
+            aria-label="Escribir a vibo">
+            <span style="color:#FACC15; font-weight:700">v</span>
+            <span style="color:#3B82F6; font-weight:700">i</span>
+            <span style="color:#EF4444; font-weight:700">b</span>
+            <span style="color:#22C55E; font-weight:700">o</span>
+        </a>
+    </footer>
+
+    <script src="<?php echo $base_url; ?>frontend/assets/js/scripts.js?v=20261002b"></script>
+    <!-- Chart.js local (coloque chart.umd.min.js en frontend/assets/js/vendor/) -->
+    <script src="<?php echo $base_url; ?>frontend/assets/js/vendor/chart.umd.min.js"></script>
+    <!-- jsPDF + autotable local (descargados en frontend/assets/js/vendor/) -->
+    <script src="<?php echo $base_url; ?>frontend/assets/js/vendor/jspdf.umd.min.js"></script>
+    <script src="<?php echo $base_url; ?>frontend/assets/js/vendor/jspdf.plugin.autotable.min.js"></script>
+    <script>
+        // Paleta cálida de baja saturación (ocres, tierra, verde oliva, gris cálido)
+        const PALETA_CALIDA = [
+            '#C9A227', '#A67C52', '#6B7F3A', '#8C7B6E', '#B08968',
+            '#7F8C6A', '#9C7A3C', '#5E8A80', '#B07D62', '#8A8F6A'
+        ];
+
+        let chartResponsable = null;
+        let chartProceso = null;
+        let accesoBloqueado = false;
+        let ultimoReporte = null;   // Último reporte generado (para exportar a PDF)
+        let ultimosFiltros = {};    // Filtros usados en la última generación
+
+        // Helper: números con coma decimal y 2 decimales (mismo formato del listado)
+        function fmtNum(n) {
+            if (n === null || n === undefined || n === '') return '-';
+            const val = parseFloat(n);
+            if (isNaN(val)) return '-';
+            return val.toFixed(2).replace('.', ',');
+        }
+
+        function toISODate(d) {
+            const pad = n => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+        }
+
+        function establecerFechasPorDefecto() {
+            const hoy = new Date();
+            const desde = new Date();
+            desde.setDate(hoy.getDate() - 30);
+            document.getElementById('filtro-desde').value = toISODate(desde);
+            document.getElementById('filtro-hasta').value = toISODate(hoy);
+        }
+
+        async function cargarSelects() {
+            const [resResp, resProc] = await Promise.all([
+                callApi('responsables', 'GET'),
+                callApi('procesos', 'GET')
+            ]);
+            if (resResp.success && Array.isArray(resResp.data)) {
+                const sel = document.getElementById('filtro-responsable');
+                resResp.data.forEach(r => {
+                    const opt = document.createElement('option');
+                    opt.value = r.id;
+                    opt.textContent = r.nombre;
+                    sel.appendChild(opt);
+                });
+            }
+            if (resProc.success && Array.isArray(resProc.data)) {
+                const sel = document.getElementById('filtro-proceso');
+                resProc.data.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = p.nombre;
+                    sel.appendChild(opt);
+                });
+            }
+        }
+
+        function mostrarAccesoRestringido() {
+            accesoBloqueado = true;
+            document.getElementById('reporte-contenido').style.display = 'none';
+            document.getElementById('acceso-restringido').style.display = 'block';
+        }
+
+        async function cargarReporte() {
+            if (accesoBloqueado) return;
+            const params = new URLSearchParams();
+            const desde = document.getElementById('filtro-desde').value;
+            const hasta = document.getElementById('filtro-hasta').value;
+            const responsableId = document.getElementById('filtro-responsable').value;
+            const procesoId = document.getElementById('filtro-proceso').value;
+            if (desde) params.set('desde', desde);
+            if (hasta) params.set('hasta', hasta);
+            if (responsableId) params.set('responsable_id', responsableId);
+            if (procesoId) params.set('proceso_id', procesoId);
+            const qs = params.toString();
+            const endpoint = 'reportes/merma' + (qs ? '?' + qs : '');
+            ultimosFiltros = {
+                desde: desde || '',
+                hasta: hasta || '',
+                responsable: document.getElementById('filtro-responsable').options[document.getElementById('filtro-responsable').selectedIndex].text,
+                proceso: document.getElementById('filtro-proceso').options[document.getElementById('filtro-proceso').selectedIndex].text
+            };
+
+            marcarCargando();
+            actualizarBotonPdf(false);
+
+            const result = await callApi(endpoint, 'GET');
+            if (!result.success) {
+                const msg = result.message || '';
+                // callApi reporta el status HTTP en el mensaje cuando el payload no lo incluye
+                if (/401/.test(msg)) {
+                    const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
+                    window.location.href = base;
+                    return;
+                }
+                if (/403/.test(msg) || /acceso|denegado|permiso|administrador/i.test(msg)) {
+                    mostrarAccesoRestringido();
+                    return;
+                }
+                showMessageModal('Error', msg || 'No se pudo generar el reporte.', 'error');
+                restaurarTablasVacio();
+                ultimoReporte = null;
+                return;
+            }
+            ultimoReporte = result.data || null;
+            actualizarBotonPdf(true);
+            renderReporte(result.data);
+        }
+
+        function actualizarBotonPdf(hayDatos) {
+            const btn = document.getElementById('btn-exportar-pdf');
+            btn.disabled = !hayDatos;
+            btn.title = hayDatos ? 'Descargar el último reporte en PDF' : 'Genere primero el reporte';
+        }
+
+        function fechaGeneracion() {
+            const ahora = new Date();
+            const pad = n => String(n).padStart(2, '0');
+            return `${pad(ahora.getDate())}/${pad(ahora.getMonth() + 1)}/${ahora.getFullYear()} ${pad(ahora.getHours())}:${pad(ahora.getMinutes())}`;
+        }
+
+        function exportarPDF() {
+            if (!ultimoReporte) {
+                showMessageModal('Sin datos', 'Genere primero el reporte.', 'info');
+                return;
+            }
+            if (!window.jspdf || !window.jspdf.jsPDF) {
+                showMessageModal('Error', 'No se pudo cargar la librería de PDF.', 'error');
+                return;
+            }
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+            const VERDE = [35, 75, 70];
+            const GRIS = [107, 124, 120];
+            let y = 56;
+
+            // Encabezado
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(16);
+            doc.setTextColor(VERDE[0], VERDE[1], VERDE[2]);
+            doc.text(`Reporte de Merma — ${fechaGeneracion()}`, 40, y);
+            y += 22;
+
+            // Rango de filtros usados
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            doc.setTextColor(GRIS[0], GRIS[1], GRIS[2]);
+            const f = ultimosFiltros;
+            const filtroTexto = `Desde: ${f.desde || '—'}   Hasta: ${f.hasta || '—'}   Responsable: ${f.responsable || 'Todos'}   Proceso: ${f.proceso || 'Todos'}`;
+            doc.text(filtroTexto, 40, y);
+            y += 14;
+
+            const estiloTabla = {
+                theme: 'grid',
+                styles: { font: 'helvetica', fontSize: 8.5, cellPadding: 4 },
+                headStyles: { fillColor: VERDE, textColor: 255, fontStyle: 'bold' },
+                alternateRowStyles: { fillColor: [249, 250, 251] },
+                margin: { left: 40, right: 40 }
+            };
+
+            // Tabla KPI
+            const g = ultimoReporte.global || {};
+            doc.autoTable(Object.assign({}, estiloTabla, {
+                startY: y,
+                head: [['Concepto', 'Valor']],
+                body: [
+                    ['Total Entregado (gr)', fmtNum(g.total_entregado)],
+                    ['Total Devuelto (gr)', fmtNum(g.total_recibido)],
+                    ['Merma (gr)', fmtNum(g.merma_gr)],
+                    ['Merma %', fmtNum(g.merma_pct) + ' %'],
+                    ['Nº Órdenes', (g.ordenes !== undefined && g.ordenes !== null) ? String(g.ordenes) : '-']
+                ],
+                columnStyles: { 1: { halign: 'right' } }
+            }));
+            y = doc.lastAutoTable.finalY + 24;
+
+            // Tabla personas con más merma
+            doc.autoTable(Object.assign({}, estiloTabla, {
+                startY: y,
+                head: [['Responsable', 'Oro Entreg.', 'Oro Dev.', 'Mat. Ent.', 'Mat. Dev.', 'Merma (gr)', 'Merma %', 'Órdenes']],
+                body: (ultimoReporte.por_responsable || []).map(r => [
+                    r.responsable || '-',
+                    fmtNum(r.oro_entregado), fmtNum(r.oro_recibido),
+                    fmtNum(r.materiales_entregados), fmtNum(r.materiales_recibidos),
+                    fmtNum(r.merma_gr), fmtNum(r.merma_pct) + ' %',
+                    (r.ordenes !== undefined && r.ordenes !== null) ? String(r.ordenes) : '-'
+                ]),
+                columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' } }
+            }));
+            y = doc.lastAutoTable.finalY + 24;
+
+            // Tabla por proceso
+            doc.autoTable(Object.assign({}, estiloTabla, {
+                startY: y,
+                head: [['Proceso', 'Entregado', 'Devuelto', 'Merma (gr)', 'Merma %', 'Órdenes']],
+                body: (ultimoReporte.por_proceso || []).map(r => [
+                    r.proceso || '-',
+                    fmtNum(r.total_entregado), fmtNum(r.total_recibido),
+                    fmtNum(r.merma_gr), fmtNum(r.merma_pct) + ' %',
+                    (r.ordenes !== undefined && r.ordenes !== null) ? String(r.ordenes) : '-'
+                ]),
+                columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' } }
+            }));
+            y = doc.lastAutoTable.finalY + 24;
+
+            // Tabla por producto
+            doc.autoTable(Object.assign({}, estiloTabla, {
+                startY: y,
+                head: [['Producto', 'Entregado', 'Devuelto', 'Merma (gr)', 'Merma %', 'Órdenes']],
+                body: (ultimoReporte.por_producto || []).map(r => [
+                    r.producto || '-',
+                    fmtNum(r.total_entregado), fmtNum(r.total_recibido),
+                    fmtNum(r.merma_gr), fmtNum(r.merma_pct) + ' %',
+                    (r.ordenes !== undefined && r.ordenes !== null) ? String(r.ordenes) : '-'
+                ]),
+                columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' } }
+            }));
+
+            // Nombre del archivo: reporte-merma-YYYYMMDD.pdf
+            const ahora = new Date();
+            const pad = n => String(n).padStart(2, '0');
+            const ymd = `${ahora.getFullYear()}${pad(ahora.getMonth() + 1)}${pad(ahora.getDate())}`;
+            doc.save(`reporte-merma-${ymd}.pdf`);
+        }
+
+        function marcarCargando() {
+            document.getElementById('tbody-responsable').innerHTML =
+                '<tr><td colspan="8" class="text-center text-gray-500">Cargando datos...</td></tr>';
+            document.getElementById('tbody-proceso').innerHTML =
+                '<tr><td colspan="6" class="text-center text-gray-500">Cargando datos...</td></tr>';
+            document.getElementById('tbody-producto').innerHTML =
+                '<tr><td colspan="6" class="text-center text-gray-500">Cargando datos...</td></tr>';
+        }
+
+        function restaurarTablasVacio() {
+            document.getElementById('tbody-responsable').innerHTML =
+                '<tr><td colspan="8" class="text-center text-gray-500">Sin datos</td></tr>';
+            document.getElementById('tbody-proceso').innerHTML =
+                '<tr><td colspan="6" class="text-center text-gray-500">Sin datos</td></tr>';
+            document.getElementById('tbody-producto').innerHTML =
+                '<tr><td colspan="6" class="text-center text-gray-500">Sin datos</td></tr>';
+        }
+
+        function renderReporte(data) {
+            if (!data) {
+                restaurarTablasVacio();
+                return;
+            }
+            renderKPIs(data.global || {});
+            renderGrafica('chart-responsable', 'chart-responsable-box', 'sin-datos-responsable',
+                data.por_responsable, 'responsable', (c) => { chartResponsable = c; }, (c) => chartResponsable);
+            renderGrafica('chart-proceso', 'chart-proceso-box', 'sin-datos-proceso',
+                data.por_proceso, 'proceso', (c) => { chartProceso = c; }, (c) => chartProceso);
+            renderTablaResponsables(data.por_responsable || []);
+            renderTablaSimple('tbody-proceso', data.por_proceso || []);
+            renderTablaSimple('tbody-producto', data.por_producto || []);
+        }
+
+        function renderKPIs(g) {
+            document.getElementById('kpi-entregado').textContent = fmtNum(g.total_entregado);
+            document.getElementById('kpi-devuelto').textContent = fmtNum(g.total_recibido);
+            const kpiMerma = document.getElementById('kpi-merma');
+            kpiMerma.textContent = fmtNum(g.merma_gr);
+            const mermaNum = parseFloat(g.merma_gr) || 0;
+            kpiMerma.classList.remove('kpi-rojo', 'kpi-verde');
+            kpiMerma.classList.add(mermaNum > 0 ? 'kpi-rojo' : 'kpi-verde');
+            document.getElementById('kpi-merma-pct').textContent = fmtNum(g.merma_pct) + ' %';
+            document.getElementById('kpi-ordenes').textContent = (g.ordenes !== undefined && g.ordenes !== null) ? g.ordenes : '-';
+        }
+
+        function renderGrafica(canvasId, boxId, sinDatosId, filas, campoNombre, asignar, obtener) {
+            const filasValidas = (filas || []).filter(f => f && f[campoNombre] !== undefined);
+            const box = document.getElementById(boxId);
+            const sinDatos = document.getElementById(sinDatosId);
+            const anterior = obtener();
+            if (anterior) {
+                anterior.destroy();
+                asignar(null);
+            }
+            if (filasValidas.length === 0) {
+                box.style.display = 'none';
+                sinDatos.style.display = 'flex';
+                return;
+            }
+            box.style.display = 'block';
+            sinDatos.style.display = 'none';
+
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: filasValidas.map(f => f[campoNombre]),
+                    datasets: [{
+                        label: 'Merma (gr)',
+                        data: filasValidas.map(f => parseFloat(f.merma_gr) || 0),
+                        backgroundColor: filasValidas.map((_, i) => PALETA_CALIDA[i % PALETA_CALIDA.length] + 'CC'),
+                        borderColor: filasValidas.map((_, i) => PALETA_CALIDA[i % PALETA_CALIDA.length]),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => ` Merma: ${fmtNum(context.parsed.y)} gr`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { maxRotation: 45, minRotation: 30 }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: (value) => fmtNum(value)
+                            }
+                        }
+                    }
+                }
+            });
+            asignar(chart);
+        }
+
+        function celdaMerma(mermaGr) {
+            const num = parseFloat(mermaGr) || 0;
+            const clase = num > 0 ? 'merma-pos' : (num < 0 ? 'merma-neg' : '');
+            return `<td class="num ${clase}">${fmtNum(mermaGr)}</td>`;
+        }
+
+        function renderTablaResponsables(filas) {
+            const tbody = document.getElementById('tbody-responsable');
+            if (!filas || filas.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-gray-500">Sin datos</td></tr>';
+                return;
+            }
+            tbody.innerHTML = '';
+            filas.forEach((f, idx) => {
+                const tr = document.createElement('tr');
+                // Las filas ya vienen ordenadas por merma_gr DESC: resaltar el Top 3
+                const mermaNum = parseFloat(f.merma_gr) || 0;
+                if (idx < 3 && mermaNum > 0) tr.classList.add('row-merma-alta');
+                tr.innerHTML = `
+                    <td>${f.responsable || '-'}</td>
+                    <td class="num">${fmtNum(f.oro_entregado)}</td>
+                    <td class="num">${fmtNum(f.oro_recibido)}</td>
+                    <td class="num">${fmtNum(f.materiales_entregados)}</td>
+                    <td class="num">${fmtNum(f.materiales_recibidos)}</td>
+                    ${celdaMerma(f.merma_gr)}
+                    <td class="num">${fmtNum(f.merma_pct)} %</td>
+                    <td class="num">${(f.ordenes !== undefined && f.ordenes !== null) ? f.ordenes : '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderTablaSimple(tbodyId, filas) {
+            const tbody = document.getElementById(tbodyId);
+            if (!filas || filas.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-500">Sin datos</td></tr>';
+                return;
+            }
+            tbody.innerHTML = '';
+            filas.forEach(f => {
+                const nombre = f.proceso || f.producto || '-';
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${nombre}</td>
+                    <td class="num">${fmtNum(f.total_entregado)}</td>
+                    <td class="num">${fmtNum(f.total_recibido)}</td>
+                    ${celdaMerma(f.merma_gr)}
+                    <td class="num">${fmtNum(f.merma_pct)} %</td>
+                    <td class="num">${(f.ordenes !== undefined && f.ordenes !== null) ? f.ordenes : '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        window.onload = function () {
+            establecerFechasPorDefecto();
+            cargarSelects();
+            cargarReporte();
+
+            document.getElementById('btn-generar').addEventListener('click', cargarReporte);
+            document.getElementById('btn-exportar-pdf').addEventListener('click', exportarPDF);
+
+            // Listener de Logout
+            document.getElementById('logout-btn').addEventListener('click', async function (e) {
+                e.preventDefault();
+                const result = await callApi('logout', 'GET');
+                if (result.success) {
+                    const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
+                    window.location.href = base;
+                } else {
+                    showMessageModal('Error', 'No se pudo cerrar sesión.', 'error');
+                }
+            });
+        };
+    </script>
+</body>
+
+</html>

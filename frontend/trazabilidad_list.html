@@ -26,14 +26,73 @@ $page_title = "Listado General de Trazabilidad";
 
         .data-table {
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate;
+            border-spacing: 0;
             min-width: 900px;
             table-layout: auto;
         }
 
+        /* Columna ACCIONES siempre visible (fijada a la derecha) */
+        .data-table th:last-child,
+        .data-table td:last-child {
+            position: sticky;
+            right: 0;
+            box-shadow: -6px 0 8px -6px rgba(0, 0, 0, 0.25);
+        }
+
+        .data-table th:last-child {
+            z-index: 20;
+        }
+
+        .data-table td:last-child {
+            background: #ffffff;
+            z-index: 2;
+            white-space: nowrap;
+        }
+
+        /* Contenedor para container queries: decide según el ancho REAL de la tabla */
+        #table-cq {
+            container-type: inline-size;
+        }
+
+        /* En espacios medianos ocultar columnas menos críticas para evitar scroll horizontal */
+        @container (max-width: 1600px) {
+            .data-table th:nth-child(9),
+            .data-table td:nth-child(9),
+            .data-table th:nth-child(11),
+            .data-table td:nth-child(11) {
+                display: none;
+            }
+        }
+
+        /* En espacios angostos: ocultar CANT./ORO/MERMA y apilar los botones de acciones */
+        @container (max-width: 1300px) {
+            .data-table th:nth-child(7),
+            .data-table td:nth-child(7),
+            .data-table th:nth-child(8),
+            .data-table td:nth-child(8),
+            .data-table th:nth-child(13),
+            .data-table td:nth-child(13) {
+                display: none;
+            }
+
+            .data-table td:last-child {
+                white-space: normal;
+                min-width: 130px;
+            }
+
+            .data-table td:last-child a,
+            .data-table td:last-child button {
+                display: block;
+                width: 100%;
+                margin: 3px 0;
+                text-align: center;
+            }
+        }
+
         .data-table th,
         .data-table td {
-            padding: 8px 10px;
+            padding: 8px 8px;
             text-align: left;
             border-bottom: 1px solid #e5e7eb;
             font-size: 0.875rem;
@@ -269,16 +328,26 @@ $page_title = "Listado General de Trazabilidad";
             </div>
             <div class="flex justify-between items-center mb-4 flex-wrap gap-4">
                 <h2 class="text-2xl font-semibold text-gray-800">Historial de Movimientos</h2>
-                <div class="relative">
-                    <input type="text" id="search-input" placeholder="Buscar..."
-                        class="pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 w-full sm:w-64">
-                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd"
-                                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                                clip-rule="evenodd" />
-                        </svg>
-                    </span>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button id="btn-ediciones" type="button"
+                        class="btn-primary px-3 py-2 text-sm hidden relative"
+                        title="Solicitudes de edición de movimientos pendientes"
+                        onclick="openEdicionesModal()">
+                        ✏️ Solicitudes de edición
+                        <span id="ediciones-badge"
+                            class="hidden absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center leading-none">0</span>
+                    </button>
+                    <div class="relative">
+                        <input type="text" id="search-input" placeholder="Buscar..."
+                            class="pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 w-full sm:w-64">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd"
+                                    d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -289,14 +358,16 @@ $page_title = "Listado General de Trazabilidad";
                 <select id="filter-operario">
                     <option value="">Todos los operarios</option>
                 </select>
-                <input type="date" id="filter-fecha" title="Filtrar por fecha">
+                <input type="date" id="filter-desde" title="Filtrar desde esta fecha" placeholder="Desde" aria-label="Desde">
+                <input type="date" id="filter-hasta" title="Filtrar hasta esta fecha" placeholder="Hasta" aria-label="Hasta">
             </div>
 
+            <div id="table-cq">
             <div class="table-container">
                 <table class="data-table desktop-only" id="main-table">
                     <thead>
                         <tr>
-                            <th>CONSECUTIVO</th>
+                            <th>ORDEN</th>
                             <th>ESTADO</th>
                             <th>FECHA</th>
                             <th>OPERARIO</th>
@@ -321,6 +392,7 @@ $page_title = "Listado General de Trazabilidad";
                 <div id="mobile-cards" class="mobile-only">
                     <p class="text-center text-gray-500 p-4">Cargando datos...</p>
                 </div>
+            </div>
             </div>
             <div class="flex items-center justify-between mt-4" id="pager" style="display:none;">
                 <button id="prev-page" class="px-3 py-1 bg-gray-200 rounded">Anterior</button>
@@ -351,8 +423,134 @@ $page_title = "Listado General de Trazabilidad";
             <div id="order-detail-content" class="space-y-4">
                 <!-- Contenido cargado por JS -->
             </div>
+
+            <!-- Formulario inline: Agregar devolución parcial -->
+            <div id="inline-partial-form" class="hidden mt-5 pt-4 border-t border-gray-200">
+                <h4 class="text-lg font-semibold text-gray-700 mb-3">➕ Registrar entrega / devolución parcial</h4>
+                <div class="mb-3">
+                    <label class="block text-sm text-gray-600 mb-1">Tipo de movimiento</label>
+                    <div class="flex flex-wrap gap-4">
+                        <label class="flex items-center gap-1.5 text-sm cursor-pointer">
+                            <input type="radio" name="ip-tipo" value="recibido" checked class="accent-teal-700">
+                            <span>⬇ Devolución (oro que regresa)</span>
+                        </label>
+                        <label class="flex items-center gap-1.5 text-sm cursor-pointer">
+                            <input type="radio" name="ip-tipo" value="entrega" class="accent-teal-700">
+                            <span>⬆ Entrega parcial (oro que sale)</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Fecha y hora</label>
+                        <input type="text" id="ip-fecha" class="w-full bg-gray-100 cursor-default" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1" id="ip-oro-label">Oro recibido (gr)</label>
+                        <input type="text" id="ip-oro" inputmode="decimal" class="w-full" placeholder="Ej: 10.50">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Observaciones</label>
+                        <input type="text" id="ip-obs" class="w-full" placeholder="Opcional">
+                    </div>
+                </div>
+                <div class="mt-3 border border-gray-300 rounded-lg p-3 bg-gray-50">
+                    <label class="block text-sm text-gray-600 mb-2">Materiales (gr)</label>
+                    <div class="flex flex-wrap gap-2 items-center">
+                        <select id="ip-material-select" class="flex-1 min-w-[180px]"></select>
+                        <input type="text" id="ip-material-peso" inputmode="decimal" placeholder="Peso (gr)" class="w-32">
+                        <button type="button" id="ip-add-material" class="btn-primary px-3 py-1 text-sm">+</button>
+                    </div>
+                    <div id="ip-materiales-list" class="mt-2 space-y-1"></div>
+                    <p id="ip-material-error" class="text-xs text-red-500 mt-1 hidden"></p>
+                </div>
+                <div class="mt-3">
+                    <label class="block text-sm text-gray-600 mb-1" id="ip-foto-label">Fotos de la devolución <span class="text-red-600 font-bold">*obligatoria</span></label>
+                    <div class="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:items-center">
+                        <label class="w-full sm:w-auto text-center px-4 py-3 bg-teal-700 text-white rounded text-base cursor-pointer hover:bg-teal-800">
+                            📷 Tomar foto
+                            <input type="file" id="ip-foto-camera" accept="image/*" capture="environment" class="hidden">
+                        </label>
+                        <label class="w-full sm:w-auto text-center px-4 py-3 bg-gray-600 text-white rounded text-base cursor-pointer hover:bg-gray-700">
+                            🖼 Subir fotos
+                            <input type="file" id="ip-foto-upload" accept="image/*" multiple class="hidden">
+                        </label>
+                        <span id="ip-foto-count" class="text-xs text-gray-500"></span>
+                    </div>
+                    <div id="ip-foto-preview" class="flex flex-wrap gap-2 mt-2"></div>
+                </div>
+                <div class="flex justify-end gap-2 mt-4">
+                    <button type="button" id="ip-cancel" class="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500">Cancelar</button>
+                    <button type="button" id="ip-submit" class="btn-primary px-4 py-2">Registrar parcial</button>
+                </div>
+            </div>
+
+            <!-- Formulario inline: Anexar producto a la orden -->
+            <div id="inline-product-form" class="hidden mt-5 pt-4 border-t border-gray-200">
+                <h4 class="text-lg font-semibold text-gray-700 mb-3">➕ Anexar producto a la orden</h4>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Producto</label>
+                        <select id="prod-select" class="w-full"></select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Cantidad</label>
+                        <input type="number" id="prod-cantidad" class="w-full" value="1" min="1">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Peso oro (gr)</label>
+                        <input type="text" id="prod-oro" inputmode="decimal" class="w-full" placeholder="Opcional">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Peso materiales (gr)</label>
+                        <input type="text" id="prod-mat" inputmode="decimal" class="w-full" placeholder="Opcional">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Observaciones</label>
+                        <input type="text" id="prod-obs" class="w-full" placeholder="Opcional">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Foto (opcional)</label>
+                        <input type="file" id="prod-foto" accept="image/*" class="w-full text-sm">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 mt-4">
+                    <button type="button" id="prod-cancel" class="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500">Cancelar</button>
+                    <button type="button" id="prod-submit" class="btn-primary px-4 py-2">Guardar</button>
+                </div>
+            </div>
+
+            <!-- Formulario inline: Editar movimiento (pesos/observaciones) -->
+            <div id="edit-mov-form" class="hidden mt-5 pt-4 border-t border-gray-200">
+                <h4 class="text-lg font-semibold text-gray-700 mb-3">✏️ Editar movimiento</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Peso oro (gr)</label>
+                        <input type="text" id="em-oro" inputmode="decimal" class="w-full">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Peso materiales (gr)</label>
+                        <input type="text" id="em-mat" inputmode="decimal" class="w-full">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Observaciones</label>
+                        <input type="text" id="em-obs" class="w-full">
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <label class="block text-sm text-gray-600 mb-1">Motivo del cambio <span class="text-red-600 font-bold">*obligatorio</span></label>
+                    <input type="text" id="em-motivo" class="w-full" placeholder="Ej: corrección de pesaje">
+                </div>
+                <div class="flex justify-end gap-2 mt-4">
+                    <button type="button" id="em-cancel" class="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500">Cancelar</button>
+                    <button type="button" id="em-submit" class="btn-primary px-4 py-2">Enviar solicitud</button>
+                </div>
+            </div>
+
             <div class="flex justify-end gap-2 mt-6 pt-4 border-t">
-                <button id="btn-add-return" class="btn-primary px-4 py-2" style="background-color: #059669 !important;">Agregar devolución</button>
+                <button id="btn-add-return" class="btn-primary px-4 py-2" style="background-color: #059669 !important;" title="Registrar una entrega (oro que sale) o devolución (oro que regresa) sobre esta orden">➕ Agregar entrega / devolución parcial</button>
                 <button id="btn-view-materials" class="btn-primary px-4 py-2" style="background-color: #7c3aed !important;" onclick="viewMaterialsFromDetail()">Ver materiales</button>
             </div>
         </div>
@@ -383,6 +581,19 @@ $page_title = "Listado General de Trazabilidad";
         </div>
     </div>
 
+    <!-- Modal: Solicitudes de edición de movimientos (solo admin) -->
+    <div id="ediciones-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg p-6 max-w-3xl w-full max-h-[90vh] overflow-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold">Solicitudes de edición pendientes</h3>
+                <button class="text-gray-500 hover:text-gray-800 text-3xl leading-none" onclick="closeEdicionesModal();" aria-label="Cerrar">&times;</button>
+            </div>
+            <div id="ediciones-content" class="space-y-4">
+                <!-- Contenido cargado por JS -->
+            </div>
+        </div>
+    </div>
+
     <footer class="p-4 text-center text-gray-500 text-sm">
         Sistema de Trazabilidad &copy;
         <?php echo date('Y'); ?> -
@@ -395,7 +606,7 @@ $page_title = "Listado General de Trazabilidad";
         </a>
     </footer>
 
-    <script src="<?php echo $base_url; ?>frontend/assets/js/scripts.js"></script>
+    <script src="<?php echo $base_url; ?>frontend/assets/js/scripts.js?v=20261002b"></script>
     <!-- SheetJS local para exportar a XLSX (coloque xlsx.full.min.js en frontend/assets/js/vendor/) -->
     <script src="<?php echo $base_url; ?>frontend/assets/js/vendor/xlsx.full.min.js"></script>
     <script>
@@ -437,10 +648,9 @@ $page_title = "Listado General de Trazabilidad";
             if (!datetimeString) return '-';
             try {
                 const date = new Date(datetimeString.replace(' ', 'T'));
-                return date.toLocaleDateString('es-CO', {
-                    year: 'numeric', month: 'short', day: '2-digit',
-                    hour: '2-digit', minute: '2-digit'
-                });
+                if (isNaN(date.getTime())) return datetimeString;
+                const pad = n => String(n).padStart(2, '0');
+                return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
             } catch (e) {
                 return datetimeString;
             }
@@ -473,14 +683,15 @@ $page_title = "Listado General de Trazabilidad";
                 const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
 
                 let actions = [];
-                actions.push(`<button onclick="openOrderDetailModal('${consecStr}')" class="btn-primary px-2 py-1 text-xs inline-block" style="background-color: #2563eb !important;">Ver detalle</button>`);
+                actions.push(`<button onclick="openOrderDetailModal('${consecStr}')" class="btn-primary px-2 py-1 text-xs inline-block" style="background-color: #2563eb !important;" title="Ver detalle de la orden">Detalle</button>`);
                 if (estado === 'pendiente' || estado === 'parcial') {
                     const returnUrl = base.replace(/\/$/, '') + '/trazabilidad?mode=devolucion&consecutivo=' + encodeURIComponent(consecStr);
-                    actions.push(`<a href="${returnUrl}" class="btn-primary px-2 py-1 text-xs inline-block" style="background-color: #059669 !important;">Agregar devolución</a>`);
+                    actions.push(`<a href="${returnUrl}" class="btn-primary px-2 py-1 text-xs inline-block" style="background-color: #059669 !important;" title="Agregar entrega o devolución parcial a esta orden">+ Parcial</a>`);
                 }
                 if (isAdmin) {
                     const editUrl = base.replace(/\/$/, '') + '/trazabilidad_edit?id=' + encodeURIComponent(item.consecutivo);
-                    actions.push(`<a href="${editUrl}" class="btn-primary px-2 py-1 text-xs inline-block" style="background-color: #7c3aed !important;">Editar</a>`);
+                    actions.push(`<a href="${editUrl}" class="btn-primary px-2 py-1 text-xs inline-block" style="background-color: #7c3aed !important;" title="Editar orden">Editar</a>`);
+                    actions.push(`<button type="button" onclick="deleteOrden('${consecStr}')" class="btn-primary px-2 py-1 text-xs inline-block" style="background-color: #dc2626 !important;" title="Eliminar orden (solo admin)">Eliminar</button>`);
                 }
 
                 const row = document.createElement('tr');
@@ -492,7 +703,7 @@ $page_title = "Listado General de Trazabilidad";
                 const pesoMat = parseFloat(item.total_mat_entregado) || 0;
                 const totalEnt = pesoOro + pesoMat;
                 const totalRecibido = (parseFloat(item.total_oro_recibido) || 0) + (parseFloat(item.total_mat_recibido) || 0);
-                const saldoNum = parseFloat(item.saldo_oro) || 0;
+                const saldoNum = parseFloat(item.saldo_total ?? item.saldo_oro) || 0;
                 const saldoClass = saldoNum > 0 ? 'saldo-pendiente' : 'saldo-cero';
                 const mermaNum = parseFloat(item.merma) || 0;
                 const mermaClass = mermaNum > 0 ? 'text-green-600 font-bold' : (mermaNum < 0 ? 'text-red-600 font-bold' : '');
@@ -588,6 +799,19 @@ $page_title = "Listado General de Trazabilidad";
             }
         }
 
+        // Eliminación de orden — solo administrador (el botón solo se renderiza para admin)
+        async function deleteOrden(consecStr) {
+            if (!isAdmin) return;
+            if (!await confirmModal('Eliminar Orden', `¿ELIMINAR la orden #${consecStr}?\n\nSe borrarán sus movimientos, materiales y fotos. Esta acción NO se puede deshacer.`, { danger: true })) return;
+            const result = await callApi(`${API_ORDENES}/${parseInt(consecStr, 10)}`, 'DELETE');
+            if (result.success) {
+                showMessageModal('Orden Eliminada', result.message || `Orden #${consecStr} eliminada.`, 'success');
+                loadTrazabilidadData(currentPage);
+            } else {
+                showMessageModal('Error', result.message || 'No se pudo eliminar la orden.', 'error');
+            }
+        }
+
         function populateFilters(data) {
             const estadoSel = document.getElementById('filter-estado');
             const operarioSel = document.getElementById('filter-operario');
@@ -604,12 +828,15 @@ $page_title = "Listado General de Trazabilidad";
             const query = document.getElementById('search-input').value.toLowerCase().trim();
             const estado = document.getElementById('filter-estado').value;
             const operario = document.getElementById('filter-operario').value;
-            const fecha = document.getElementById('filter-fecha').value;
+            const desde = document.getElementById('filter-desde').value;
+            const hasta = document.getElementById('filter-hasta').value;
             filteredCache = trazabilidadDataCache.filter(item => {
                 const matchesQuery = !query || Object.values(item).some(v => String(v).toLowerCase().includes(query));
                 const matchesEstado = !estado || item.estado === estado;
                 const matchesOperario = !operario || item.responsable_nombre === operario;
-                const matchesFecha = !fecha || (item.fecha_creacion && item.fecha_creacion.startsWith(fecha));
+                // Rango de fechas: fecha_creacion es 'YYYY-MM-DD HH:MM:SS'; comparación lexicográfica correcta
+                const matchesFecha = (!desde || (item.fecha_creacion && item.fecha_creacion >= desde))
+                    && (!hasta || (item.fecha_creacion && item.fecha_creacion <= hasta + ' 23:59:59'));
                 return matchesQuery && matchesEstado && matchesOperario && matchesFecha;
             });
             currentPage = 1;
@@ -618,6 +845,20 @@ $page_title = "Listado General de Trazabilidad";
 
         async function openOrderDetailModal(consecutivoStr) {
             currentDetailConsecutivo = consecutivoStr;
+            // Resetear/ocultar formulario inline de parciales
+            const ipForm = document.getElementById('inline-partial-form');
+            if (ipForm) ipForm.classList.add('hidden');
+            ipMaterialesSel = {};
+            ipCurrentConsecutivo = null;
+            // Resetear/ocultar formulario inline de anexar producto
+            const prodForm = document.getElementById('inline-product-form');
+            if (prodForm) prodForm.classList.add('hidden');
+            prodCurrentConsecutivo = null;
+            // Resetear/ocultar formulario inline de edición de movimiento
+            const emForm = document.getElementById('edit-mov-form');
+            if (emForm) emForm.classList.add('hidden');
+            emMovimientoId = null;
+            currentDetailMovimientos = [];
             const modal = document.getElementById('order-detail-modal');
             const content = document.getElementById('order-detail-content');
             const btnAddReturn = document.getElementById('btn-add-return');
@@ -630,7 +871,7 @@ $page_title = "Listado General de Trazabilidad";
                     const d = result.data;
                     const estado = d.estado || 'pendiente';
                     const cfg = ESTADO_CONFIG[estado] || ESTADO_CONFIG.pendiente;
-                    const saldoNum = parseFloat(d.saldo_oro) || 0;
+                    const saldoNum = parseFloat(d.saldo_total ?? d.saldo_oro) || 0;
                     const detOro = parseFloat(d.total_oro_entregado) || 0;
                     const detMat = parseFloat(d.total_mat_entregado) || 0;
                     const detTotal = detOro + detMat;
@@ -684,7 +925,89 @@ $page_title = "Listado General de Trazabilidad";
                             </div>
                         </div>
                     `;
+                    // --- Sección: Productos de la orden ---
+                    const productosOrden = Array.isArray(d.productos) ? d.productos : [];
+                    const puedeAnexarProducto = d.puede_anexar === true && (estado === 'pendiente' || estado === 'parcial');
+                    let productosHtml = '';
+                    if (productosOrden.length === 0) {
+                        productosHtml = '<p class="text-sm text-gray-500">Sin productos anexados.</p>';
+                    } else {
+                        productosOrden.forEach(p => {
+                            const pOro = parseFloat(p.peso_oro) || 0;
+                            const pMat = parseFloat(p.peso_materiales) || 0;
+                            const pesosPartes = [];
+                            if (pOro > 0) pesosPartes.push(`Oro: ${fmtNum(pOro)} gr`);
+                            if (pMat > 0) pesosPartes.push(`Mat: ${fmtNum(pMat)} gr`);
+                            productosHtml += `
+                                <div class="flex flex-wrap justify-between items-start gap-2 bg-gray-50 border border-gray-200 rounded-lg p-3">
+                                    <div>
+                                        <div class="font-semibold text-gray-800">${p.producto || ('Producto #' + p.producto_id)}</div>
+                                        <div class="text-sm text-gray-600">Cantidad: ${p.cantidad ?? '-'}</div>
+                                        ${pesosPartes.length > 0 ? `<div class="text-xs text-gray-500 mt-1">${pesosPartes.join(' | ')}</div>` : ''}
+                                        ${p.observaciones ? `<div class="text-xs text-gray-600 mt-1">Obs: ${p.observaciones}</div>` : ''}
+                                    </div>
+                                    <div class="text-xs text-gray-400">${formatDate(p.created_at)}</div>
+                                </div>`;
+                        });
+                    }
+                    html += `
+                        <div class="mb-4">
+                            <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
+                                <h3 class="text-lg font-semibold text-gray-700">Productos de la orden</h3>
+                                ${puedeAnexarProducto ? `<button type="button" onclick="toggleInlineProductForm('${consecutivoStr}')" class="btn-primary px-3 py-1 text-sm" title="Anexar un producto a esta orden">+ Anexar producto</button>` : ''}
+                            </div>
+                            <div class="space-y-2">${productosHtml}</div>
+                        </div>
+                    `;
+                    // --- Tabla resumen de pesos: Tipo | Entrega (gr) | Devolución (gr) ---
+                    const oroRecib = parseFloat(d.total_oro_recibido) || 0;
+                    const matResumen = Array.isArray(d.materiales_resumen) ? d.materiales_resumen : [];
+                    const totalEnt = detOro + detMat;
+                    const totalDev = detRecibido;
+                    const mermaCalc = Math.round((totalEnt - totalDev) * 100) / 100;
+                    let resumenRows = `
+                        <tr class="border-b border-gray-200">
+                            <td class="py-2 px-3 font-medium text-gray-700">Oro 18K</td>
+                            <td class="py-2 px-3 text-right text-yellow-700 font-semibold">${fmtNum(detOro)}</td>
+                            <td class="py-2 px-3 text-right text-blue-700 font-semibold">${fmtNum(oroRecib)}</td>
+                        </tr>`;
+                    matResumen.forEach(mr => {
+                        resumenRows += `
+                        <tr class="border-b border-gray-200">
+                            <td class="py-2 px-3 font-medium text-gray-700">${mr.nombre}</td>
+                            <td class="py-2 px-3 text-right text-yellow-700 font-semibold">${fmtNum(mr.entrega)}</td>
+                            <td class="py-2 px-3 text-right text-blue-700 font-semibold">${fmtNum(mr.recibido)}</td>
+                        </tr>`;
+                    });
+                    html += `
+                        <h3 class="text-lg font-semibold text-gray-700 mb-3">Resumen de Pesos</h3>
+                        <div class="overflow-x-auto mb-4">
+                            <table class="w-full text-sm border border-gray-200 rounded-lg">
+                                <thead>
+                                    <tr class="bg-gray-100 text-gray-600 uppercase text-xs">
+                                        <th class="py-2 px-3 text-left">Tipo</th>
+                                        <th class="py-2 px-3 text-right">Entrega (gr)</th>
+                                        <th class="py-2 px-3 text-right">Devolución (gr)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${resumenRows}
+                                    <tr class="border-b border-gray-200 bg-gray-50 font-bold">
+                                        <td class="py-2 px-3 text-gray-800">Total</td>
+                                        <td class="py-2 px-3 text-right text-gray-800">${fmtNum(totalEnt)}</td>
+                                        <td class="py-2 px-3 text-right text-gray-800">${fmtNum(totalDev)}</td>
+                                    </tr>
+                                    <tr class="${mermaCalc >= 0 ? 'bg-green-50' : 'bg-purple-50'} font-bold">
+                                        <td class="py-2 px-3 text-gray-800">Merma (Entrega − Devolución)</td>
+                                        <td colspan="2" class="py-2 px-3 text-right ${mermaCalc >= 0 ? 'text-green-700' : 'text-purple-700'}">${fmtNum(mermaCalc)} gr</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
                     if (d.movimientos && d.movimientos.length > 0) {
+                        currentDetailMovimientos = d.movimientos;
+                        const puedeEditarMov = (estado === 'pendiente' || estado === 'parcial');
                         html += '<h3 class="text-lg font-semibold text-gray-700 mb-3">Movimientos</h3>';
                         html += '<div class="timeline">';
                         d.movimientos.forEach(mov => {
@@ -697,8 +1020,11 @@ $page_title = "Listado General de Trazabilidad";
                             const movOro = parseFloat(mov.peso_oro) || 0;
                             const movMat = parseFloat(mov.peso_materiales) || 0;
                             const movTotal = movOro + movMat;
-                            const movDetail = (movOro > 0 || movMat > 0) 
-                                ? `<div class="text-xs text-gray-500 mt-1">Oro: ${fmtNum(movOro)} gr | Mat: ${fmtNum(movMat)} gr</div>` 
+                            const movDetail = (movOro > 0 || movMat > 0)
+                                ? `<div class="text-xs text-gray-500 mt-1">Oro: ${fmtNum(movOro)} gr | Mat: ${fmtNum(movMat)} gr</div>`
+                                : '';
+                            const editarMovHtml = puedeEditarMov
+                                ? `<button type="button" onclick="openEditMovForm(${mov.id})" class="text-xs text-gray-500 hover:text-gray-800 underline" title="Editar pesos u observaciones de este movimiento">✏️ Editar</button>`
                                 : '';
                             html += `
                                 <div class="timeline-item">
@@ -706,7 +1032,10 @@ $page_title = "Listado General de Trazabilidad";
                                     <div class="timeline-content">
                                         <div class="flex justify-between items-start">
                                             <span class="font-semibold text-sm ${isEntrega ? 'text-teal-700' : 'text-blue-700'}">${isEntrega ? 'Entrega' : 'Devolución'}</span>
-                                            <span class="text-xs text-gray-400">${formatDate(mov.fecha)}</span>
+                                            <span class="flex items-center gap-2">
+                                                ${editarMovHtml}
+                                                <span class="text-xs text-gray-400">${formatDate(mov.fecha)}</span>
+                                            </span>
                                         </div>
                                         <div class="text-gray-800 font-bold mt-1">${fmtNum(movTotal)} gr</div>
                                         ${movDetail}
@@ -721,15 +1050,14 @@ $page_title = "Listado General de Trazabilidad";
                         html += '<p class="text-gray-500 text-center py-4">Sin movimientos registrados.</p>';
                     }
                     content.innerHTML = html;
-                    // Configurar botón Agregar devolución
+                    // Configurar botón Agregar parcial (formulario inline)
+                    const ipForm = document.getElementById('inline-partial-form');
                     if (estado === 'pendiente' || estado === 'parcial') {
-                        const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
-                        btnAddReturn.onclick = () => {
-                            window.location.href = base.replace(/\/$/, '') + '/trazabilidad?mode=devolucion&consecutivo=' + encodeURIComponent(consecutivoStr);
-                        };
+                        btnAddReturn.onclick = () => toggleInlinePartialForm(consecutivoStr);
                         btnAddReturn.style.display = 'inline-block';
                     } else {
                         btnAddReturn.style.display = 'none';
+                        ipForm.classList.add('hidden');
                     }
                     // Configurar botón Ver materiales
                     btnMaterials.onclick = () => {
@@ -757,6 +1085,548 @@ $page_title = "Listado General de Trazabilidad";
                 openMaterialsModal(currentDetailConsecutivo);
             }
         }
+
+        // === FORMULARIO INLINE: AGREGAR DEVOLUCIÓN PARCIAL ===
+        let ipMaterialesCatalog = [];
+        let ipMaterialesSel = {};   // { material_id: {nombre, peso} }
+        let ipCurrentConsecutivo = null;
+        let ipFotos = [];           // File[] seleccionados para el parcial
+
+        function ipToday() {
+            const d = new Date();
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+
+        // Fecha y hora automáticas al abrir el formulario (para medir tiempos de trabajo)
+        let ipFechaISO = '';
+        function ipNowDateTime() {
+            const now = new Date();
+            const pad = n => String(n).padStart(2, '0');
+            return {
+                display: now.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' +
+                         now.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                iso: now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) + ' ' +
+                     pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds())
+            };
+        }
+
+        async function loadIpMateriales() {
+            const sel = document.getElementById('ip-material-select');
+            sel.innerHTML = '<option value="">Cargando materiales...</option>';
+            try {
+                const r = await callApi('materiales', 'GET');
+                if (r.success && Array.isArray(r.data)) {
+                    ipMaterialesCatalog = r.data;
+                    sel.innerHTML = '<option value="">Seleccionar material...</option>';
+                    r.data.forEach(m => {
+                        const o = document.createElement('option');
+                        o.value = m.id;
+                        o.textContent = m.nombre;
+                        sel.appendChild(o);
+                    });
+                } else {
+                    sel.innerHTML = '<option value="">Error al cargar</option>';
+                    ipMaterialesCatalog = [];
+                }
+            } catch (e) {
+                sel.innerHTML = '<option value="">Error al cargar</option>';
+                ipMaterialesCatalog = [];
+            }
+        }
+
+        function renderIpMateriales() {
+            const list = document.getElementById('ip-materiales-list');
+            const ids = Object.keys(ipMaterialesSel);
+            if (ids.length === 0) {
+                list.innerHTML = '<p class="text-xs text-gray-400">Sin materiales agregados.</p>';
+                return;
+            }
+            list.innerHTML = '';
+            ids.forEach(id => {
+                const m = ipMaterialesSel[id];
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between bg-white border border-gray-200 rounded px-2 py-1 text-sm';
+                row.innerHTML = `<span>${m.nombre}</span>
+                    <span class="flex items-center gap-2">
+                        <span class="font-semibold">${fmtNum(m.peso)} gr</span>
+                        <button type="button" class="text-red-600 hover:text-red-800" data-id="${id}" title="Quitar">&times;</button>
+                    </span>`;
+                row.querySelector('button').addEventListener('click', (e) => {
+                    delete ipMaterialesSel[e.target.dataset.id];
+                    renderIpMateriales();
+                });
+                list.appendChild(row);
+            });
+        }
+
+        function toggleInlinePartialForm(consecutivoStr) {
+            ipCurrentConsecutivo = consecutivoStr;
+            const form = document.getElementById('inline-partial-form');
+            const isHidden = form.classList.contains('hidden');
+            if (isHidden) {
+                // Inicializar valores
+                const ipNow = ipNowDateTime();
+                document.getElementById('ip-fecha').value = ipNow.display;
+                ipFechaISO = ipNow.iso;
+                document.getElementById('ip-oro').value = '';
+                document.getElementById('ip-obs').value = '';
+                document.getElementById('ip-material-peso').value = '';
+                document.getElementById('ip-material-error').classList.add('hidden');
+                ipMaterialesSel = {};
+                renderIpMateriales();
+                ipResetFotos();
+                loadIpMateriales();
+                form.classList.remove('hidden');
+                document.getElementById('ip-oro').focus();
+            } else {
+                form.classList.add('hidden');
+            }
+        }
+
+        function ipResetFotos() {
+            ipFotos = [];
+            const cam = document.getElementById('ip-foto-camera');
+            const up = document.getElementById('ip-foto-upload');
+            if (cam) cam.value = '';
+            if (up) up.value = '';
+            ipRenderFotos();
+        }
+
+        function ipAddFotos(fileList) {
+            const files = Array.from(fileList || []);
+            if (files.length === 0) return;
+            ipFotos = ipFotos.concat(files);
+            ipRenderFotos();
+        }
+
+        function ipRenderFotos() {
+            const preview = document.getElementById('ip-foto-preview');
+            const count = document.getElementById('ip-foto-count');
+            if (!preview) return;
+            preview.innerHTML = '';
+            if (count) count.textContent = ipFotos.length > 0 ? ipFotos.length + ' foto(s) seleccionada(s)' : '';
+            ipFotos.forEach((f, idx) => {
+                const wrap = document.createElement('div');
+                wrap.className = 'relative';
+                const img = document.createElement('img');
+                img.className = 'w-20 h-20 sm:w-16 sm:h-16 object-cover rounded border border-gray-300';
+                img.alt = f.name;
+                const reader = new FileReader();
+                reader.onload = (e) => { img.src = e.target.result; };
+                reader.readAsDataURL(f);
+                const del = document.createElement('button');
+                del.type = 'button';
+                del.className = 'absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-7 h-7 text-base leading-none';
+                del.title = 'Quitar';
+                del.textContent = '×';
+                del.addEventListener('click', () => {
+                    ipFotos.splice(idx, 1);
+                    ipRenderFotos();
+                });
+                wrap.appendChild(img);
+                wrap.appendChild(del);
+                preview.appendChild(wrap);
+            });
+        }
+
+        function ipAddMaterial() {
+            const sel = document.getElementById('ip-material-select');
+            const pesoInput = document.getElementById('ip-material-peso');
+            const errEl = document.getElementById('ip-material-error');
+            errEl.classList.add('hidden');
+            const matId = sel.value;
+            if (!matId) { errEl.textContent = 'Seleccione un material.'; errEl.classList.remove('hidden'); return; }
+            const peso = parseFloat((pesoInput.value || '').replace(',', '.'));
+            if (!pesoInput.value || isNaN(peso) || peso <= 0) { errEl.textContent = 'Ingrese un peso válido mayor a 0.'; errEl.classList.remove('hidden'); return; }
+            const mat = ipMaterialesCatalog.find(m => String(m.id) === String(matId));
+            ipMaterialesSel[matId] = { nombre: mat ? mat.nombre : ('Material ' + matId), peso: peso };
+            pesoInput.value = '';
+            sel.value = '';
+            renderIpMateriales();
+        }
+
+        function ipGetTipo() {
+            const r = document.querySelector('input[name="ip-tipo"]:checked');
+            return r ? r.value : 'recibido';
+        }
+
+        function ipUpdateLabels() {
+            const tipo = ipGetTipo();
+            const oroLabel = document.getElementById('ip-oro-label');
+            const submitBtn = document.getElementById('ip-submit');
+            const fotoLabel = document.getElementById('ip-foto-label');
+            if (oroLabel) oroLabel.textContent = tipo === 'entrega' ? 'Oro entregado (gr)' : 'Oro recibido (gr)';
+            if (submitBtn) submitBtn.textContent = tipo === 'entrega' ? 'Registrar entrega parcial' : 'Registrar devolución parcial';
+            if (fotoLabel) fotoLabel.textContent = tipo === 'entrega' ? 'Fotos de la entrega *obligatoria' : 'Fotos de la devolución *obligatoria';
+        }
+
+        async function ipSubmit() {
+            const consecutivo = ipCurrentConsecutivo;
+            if (!consecutivo) return;
+            const tipo = ipGetTipo();
+            const oroVal = parseFloat((document.getElementById('ip-oro').value || '0').replace(',', '.'));
+            const obs = document.getElementById('ip-obs').value.trim();
+            const matIds = Object.keys(ipMaterialesSel);
+
+            if (!oroVal || oroVal <= 0) {
+                if (matIds.length === 0) {
+                    showMessageModal('Validación', 'Ingrese el peso de oro o agregue al menos un material.', 'info');
+                    return;
+                }
+            }
+
+            // Foto obligatoria para la trazabilidad del movimiento
+            if (ipFotos.length === 0) {
+                const tipoTxt = tipo === 'entrega' ? 'la entrega' : 'la devolución';
+                showMessageModal('Foto Obligatoria', `Debe tomar o subir al menos una foto de ${tipoTxt} para registrar el movimiento.`, 'error');
+                return;
+            }
+
+            const btn = document.getElementById('ip-submit');
+            const origText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Registrando...';
+
+            try {
+                const formData = new FormData();
+                formData.append('consecutivo', consecutivo);
+                formData.append('tipo', tipo);
+                formData.append('peso_oro', String(isNaN(oroVal) ? 0 : oroVal));
+                formData.append('observaciones', obs);
+                if (ipFechaISO) formData.append('fecha', ipFechaISO);
+                if (matIds.length > 0) {
+                    const payload = matIds.map(id => ({ material_id: Number(id), peso: Number(ipMaterialesSel[id].peso.toFixed(2)) }));
+                    formData.append('materiales_json', JSON.stringify(payload));
+                    const sumMat = matIds.reduce((s, id) => s + ipMaterialesSel[id].peso, 0);
+                    formData.append('peso_materiales', String(sumMat.toFixed(2)));
+                }
+                // Adjuntar fotos con la clave que espera el backend según el tipo
+                const fotoKey = tipo === 'entrega' ? 'foto_entrega[]' : 'foto_recibido[]';
+                ipFotos.forEach(f => formData.append(fotoKey, f, f.name));
+                const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
+                const apiUrl = base.replace(/\/$/, '') + '/api/movimientos';
+                const response = await fetch(apiUrl, { method: 'POST', body: formData });
+                const result = await response.json();
+                if (result.success) {
+                    const estado = result.data?.estado || result.estado;
+                    const tipoTxt = tipo === 'entrega' ? 'Entrega parcial' : 'Devolución parcial';
+                    if (estado === 'completado') {
+                        showMessageModal('Orden Finalizada', `${tipoTxt} registrada. La orden #${String(consecutivo).padStart(4,'0')} está completada.`, 'success');
+                    } else {
+                        showMessageModal('Éxito', tipoTxt + ' registrada correctamente.', 'success');
+                    }
+                    document.getElementById('inline-partial-form').classList.add('hidden');
+                    openOrderDetailModal(consecutivo);
+                } else {
+                    showMessageModal('Error de Registro', result.message || 'Error desconocido al registrar el parcial.', 'error');
+                }
+            } catch (error) {
+                console.error('Error de red/servidor:', error);
+                showMessageModal('Error de Conexión', 'No se pudo conectar al servidor.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = origText;
+            }
+        }
+
+        // === FORMULARIO INLINE: ANEXAR PRODUCTO A LA ORDEN ===
+        let prodCatalogo = [];
+        let prodCurrentConsecutivo = null;
+
+        async function loadProdCatalogo() {
+            const sel = document.getElementById('prod-select');
+            sel.innerHTML = '<option value="">Cargando productos...</option>';
+            try {
+                const r = await callApi('productos', 'GET');
+                if (r.success && Array.isArray(r.data)) {
+                    prodCatalogo = r.data;
+                    sel.innerHTML = '<option value="">Seleccionar producto...</option>';
+                    r.data.forEach(p => {
+                        const o = document.createElement('option');
+                        o.value = p.id;
+                        o.textContent = p.nombre;
+                        sel.appendChild(o);
+                    });
+                } else {
+                    sel.innerHTML = '<option value="">Error al cargar</option>';
+                    prodCatalogo = [];
+                }
+            } catch (e) {
+                sel.innerHTML = '<option value="">Error al cargar</option>';
+                prodCatalogo = [];
+            }
+        }
+
+        function toggleInlineProductForm(consecutivoStr) {
+            prodCurrentConsecutivo = consecutivoStr;
+            const form = document.getElementById('inline-product-form');
+            if (form.classList.contains('hidden')) {
+                document.getElementById('prod-select').value = '';
+                document.getElementById('prod-cantidad').value = '1';
+                document.getElementById('prod-oro').value = '';
+                document.getElementById('prod-mat').value = '';
+                document.getElementById('prod-obs').value = '';
+                const foto = document.getElementById('prod-foto');
+                if (foto) foto.value = '';
+                loadProdCatalogo();
+                form.classList.remove('hidden');
+                document.getElementById('prod-select').focus();
+            } else {
+                form.classList.add('hidden');
+            }
+        }
+
+        async function prodSubmit() {
+            const consecutivo = prodCurrentConsecutivo;
+            if (!consecutivo) return;
+            const productoId = document.getElementById('prod-select').value;
+            const cantidad = parseInt(document.getElementById('prod-cantidad').value, 10);
+            if (!productoId) {
+                showMessageModal('Validación', 'Seleccione un producto.', 'info');
+                return;
+            }
+            if (!cantidad || isNaN(cantidad) || cantidad < 1) {
+                showMessageModal('Validación', 'Ingrese una cantidad válida (mínimo 1).', 'info');
+                return;
+            }
+            const oroVal = parseFloat((document.getElementById('prod-oro').value || '0').replace(',', '.'));
+            const matVal = parseFloat((document.getElementById('prod-mat').value || '0').replace(',', '.'));
+            const obs = document.getElementById('prod-obs').value.trim();
+            const fotoInput = document.getElementById('prod-foto');
+
+            const btn = document.getElementById('prod-submit');
+            const origText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Guardando...';
+
+            try {
+                const formData = new FormData();
+                formData.append('producto_id', productoId);
+                formData.append('cantidad', String(cantidad));
+                formData.append('peso_oro', String(isNaN(oroVal) ? 0 : oroVal));
+                formData.append('peso_materiales', String(isNaN(matVal) ? 0 : matVal));
+                formData.append('observaciones', obs);
+                if (fotoInput && fotoInput.files && fotoInput.files.length > 0) {
+                    formData.append('foto[]', fotoInput.files[0], fotoInput.files[0].name);
+                }
+                const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
+                const apiUrl = base.replace(/\/$/, '') + `/api/ordenes/${parseInt(consecutivo, 10)}/productos`;
+                const response = await fetch(apiUrl, { method: 'POST', body: formData });
+                const result = await response.json();
+                if (result.success) {
+                    showMessageModal('Éxito', result.message || 'Producto anexado correctamente.', 'success');
+                    document.getElementById('inline-product-form').classList.add('hidden');
+                    openOrderDetailModal(consecutivo);
+                } else {
+                    showMessageModal('Error', result.message || 'No se pudo anexar el producto.', 'error');
+                }
+            } catch (error) {
+                console.error('Error de red/servidor:', error);
+                showMessageModal('Error de Conexión', 'No se pudo conectar al servidor.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = origText;
+            }
+        }
+
+        document.getElementById('prod-cancel').addEventListener('click', () => {
+            document.getElementById('inline-product-form').classList.add('hidden');
+            prodCurrentConsecutivo = null;
+        });
+        document.getElementById('prod-submit').addEventListener('click', prodSubmit);
+
+        // === FORMULARIO INLINE: EDITAR MOVIMIENTO (pesos / observaciones) ===
+        let emMovimientoId = null;
+        let currentDetailMovimientos = [];
+
+        function openEditMovForm(movId) {
+            const mov = currentDetailMovimientos.find(m => String(m.id) === String(movId));
+            if (!mov) return;
+            emMovimientoId = mov.id;
+            document.getElementById('em-oro').value = (parseFloat(mov.peso_oro) || 0).toFixed(2).replace('.', ',');
+            document.getElementById('em-mat').value = (parseFloat(mov.peso_materiales) || 0).toFixed(2).replace('.', ',');
+            document.getElementById('em-obs').value = mov.observaciones || '';
+            document.getElementById('em-motivo').value = '';
+            const form = document.getElementById('edit-mov-form');
+            form.classList.remove('hidden');
+            document.getElementById('em-motivo').focus();
+        }
+
+        async function emSubmit() {
+            if (!emMovimientoId) return;
+            const motivo = document.getElementById('em-motivo').value.trim();
+            if (!motivo) {
+                showMessageModal('Validación', 'El motivo del cambio es obligatorio.', 'info');
+                return;
+            }
+            const oroVal = parseFloat((document.getElementById('em-oro').value || '0').replace(',', '.'));
+            const matVal = parseFloat((document.getElementById('em-mat').value || '0').replace(',', '.'));
+            const obs = document.getElementById('em-obs').value.trim();
+
+            const btn = document.getElementById('em-submit');
+            const origText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Enviando...';
+            try {
+                const result = await callApi(`movimientos/${emMovimientoId}/solicitar-edicion`, 'POST', {
+                    peso_oro: isNaN(oroVal) ? 0 : oroVal,
+                    peso_materiales: isNaN(matVal) ? 0 : matVal,
+                    observaciones: obs,
+                    motivo: motivo
+                });
+                if (result.success) {
+                    if (result.aplicado_directo) {
+                        showMessageModal('Éxito', result.message || 'Movimiento actualizado correctamente.', 'success');
+                    } else {
+                        showMessageModal('Solicitud enviada', result.message || 'Solicitud enviada. Queda pendiente de aprobación del administrador.', 'success');
+                    }
+                    document.getElementById('edit-mov-form').classList.add('hidden');
+                    emMovimientoId = null;
+                    if (currentDetailConsecutivo) openOrderDetailModal(currentDetailConsecutivo);
+                } else {
+                    showMessageModal('Error', result.message || 'No se pudo procesar la solicitud.', 'error');
+                }
+            } finally {
+                btn.disabled = false;
+                btn.textContent = origText;
+            }
+        }
+
+        document.getElementById('em-cancel').addEventListener('click', () => {
+            document.getElementById('edit-mov-form').classList.add('hidden');
+            emMovimientoId = null;
+        });
+        document.getElementById('em-submit').addEventListener('click', emSubmit);
+
+        // === PANEL ADMIN: SOLICITUDES DE EDICIÓN PENDIENTES ===
+        let edicionesPendientesCache = [];
+
+        async function loadPendingEdiciones() {
+            const btn = document.getElementById('btn-ediciones');
+            const badge = document.getElementById('ediciones-badge');
+            if (!isAdmin) {
+                if (btn) btn.classList.add('hidden');
+                return;
+            }
+            try {
+                const result = await callApi('ediciones/pendientes', 'GET');
+                if (result.success && Array.isArray(result.data)) {
+                    edicionesPendientesCache = result.data;
+                    if (btn) btn.classList.remove('hidden');
+                    if (result.data.length > 0) {
+                        badge.textContent = String(result.data.length);
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+                } else {
+                    edicionesPendientesCache = [];
+                    if (btn) btn.classList.add('hidden');
+                    if (badge) badge.classList.add('hidden');
+                }
+            } catch (e) {
+                console.error('Error cargando solicitudes de edición:', e);
+                if (btn) btn.classList.add('hidden');
+            }
+        }
+
+        function renderEdicionesContent() {
+            const content = document.getElementById('ediciones-content');
+            if (edicionesPendientesCache.length === 0) {
+                content.innerHTML = '<p class="text-gray-500 text-center py-4">No hay solicitudes de edición pendientes.</p>';
+                return;
+            }
+            let html = '';
+            edicionesPendientesCache.forEach(ed => {
+                const va = ed.valores_actuales || { peso_oro: ed.actual_peso_oro, peso_materiales: ed.actual_peso_materiales, observaciones: ed.actual_observaciones };
+                const vp = ed.valores_propuestos || {};
+                html += `
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <div class="flex justify-between items-start flex-wrap gap-2 mb-2">
+                            <div>
+                                <div class="font-bold text-gray-800">Orden #${String(ed.consecutivo).padStart(4, '0')} — ${ed.tipo === 'entrega' ? 'Entrega' : 'Devolución'}</div>
+                                <div class="text-sm text-gray-500">Movimiento #${ed.movimiento_id} · ${formatDate(ed.fecha)}</div>
+                            </div>
+                            <div class="text-xs text-gray-500 text-right">Solicitado por ${ed.solicitado_por || '-'}<br>${formatDate(ed.fecha_solicitud)}</div>
+                        </div>
+                        <div class="text-sm text-gray-700 mb-3"><span class="font-semibold">Motivo:</span> ${ed.motivo || '-'}</div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm border border-gray-200 rounded-lg">
+                                <thead>
+                                    <tr class="bg-gray-100 text-gray-600 uppercase text-xs">
+                                        <th class="py-2 px-3 text-left">Campo</th>
+                                        <th class="py-2 px-3 text-left">Valor actual</th>
+                                        <th class="py-2 px-3 text-left">Valor propuesto</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-b border-gray-200">
+                                        <td class="py-2 px-3 font-medium text-gray-700">Peso oro (gr)</td>
+                                        <td class="py-2 px-3">${fmtNum(va.peso_oro)}</td>
+                                        <td class="py-2 px-3 font-semibold text-blue-700">${fmtNum(vp.peso_oro)}</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-200">
+                                        <td class="py-2 px-3 font-medium text-gray-700">Peso materiales (gr)</td>
+                                        <td class="py-2 px-3">${fmtNum(va.peso_materiales)}</td>
+                                        <td class="py-2 px-3 font-semibold text-blue-700">${fmtNum(vp.peso_materiales)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2 px-3 font-medium text-gray-700">Observaciones</td>
+                                        <td class="py-2 px-3">${va.observaciones || '-'}</td>
+                                        <td class="py-2 px-3 font-semibold text-blue-700">${vp.observaciones || '-'}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="flex justify-end gap-2 mt-3">
+                            <button type="button" onclick="resolverEdicion(${ed.id}, 'rechazar')" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Rechazar</button>
+                            <button type="button" onclick="resolverEdicion(${ed.id}, 'aprobar')" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Aprobar</button>
+                        </div>
+                    </div>`;
+            });
+            content.innerHTML = html;
+        }
+
+        function openEdicionesModal() {
+            if (!isAdmin) return;
+            renderEdicionesContent();
+            document.getElementById('ediciones-modal').style.display = 'flex';
+        }
+
+        function closeEdicionesModal() {
+            document.getElementById('ediciones-modal').style.display = 'none';
+        }
+
+        async function resolverEdicion(id, accion) {
+            const result = await callApi(`ediciones/${id}/${accion}`, 'POST');
+            if (result.success) {
+                showMessageModal('Éxito', result.message || `Solicitud ${accion === 'aprobar' ? 'aprobada' : 'rechazada'} correctamente.`, 'success');
+                await loadPendingEdiciones();
+                renderEdicionesContent();
+            } else {
+                showMessageModal('Error', result.message || 'No se pudo procesar la solicitud.', 'error');
+            }
+        }
+
+        // Listeners del formulario inline
+        document.getElementById('ip-add-material').addEventListener('click', ipAddMaterial);
+        document.getElementById('ip-cancel').addEventListener('click', () => {
+            document.getElementById('inline-partial-form').classList.add('hidden');
+        });
+        document.getElementById('ip-submit').addEventListener('click', ipSubmit);
+        // Actualizar etiquetas al cambiar el tipo de movimiento
+        document.querySelectorAll('input[name="ip-tipo"]').forEach(r => {
+            r.addEventListener('change', ipUpdateLabels);
+        });
+        // Fotos del parcial: cámara y galería
+        document.getElementById('ip-foto-camera').addEventListener('change', (e) => {
+            ipAddFotos(e.target.files);
+            e.target.value = '';
+        });
+        document.getElementById('ip-foto-upload').addEventListener('change', (e) => {
+            ipAddFotos(e.target.files);
+            e.target.value = '';
+        });
 
         // --- Modal de fotos: abrir/cerrar ---
         function openPhotoModal(photoUrls, title) {
@@ -797,6 +1667,9 @@ $page_title = "Listado General de Trazabilidad";
             if (event.target == document.getElementById('materials-modal')) {
                 closeMaterialsModal();
             }
+            if (event.target == document.getElementById('ediciones-modal')) {
+                closeEdicionesModal();
+            }
         }
 
         document.addEventListener('keydown', (e) => {
@@ -804,6 +1677,7 @@ $page_title = "Listado General de Trazabilidad";
                 closePhotoModal();
                 closeOrderDetailModal();
                 closeMaterialsModal();
+                closeEdicionesModal();
             }
         });
 
@@ -917,7 +1791,7 @@ $page_title = "Listado General de Trazabilidad";
                 const matNum = Number(item.total_mat_entregado) || 0;
                 const totalNum = oroNum + matNum;
                 const recibidoNum = (Number(item.total_oro_recibido) || 0) + (Number(item.total_mat_recibido) || 0);
-                const saldoNum = Number(item.saldo_oro) || 0;
+                const saldoNum = Number(item.saldo_total ?? item.saldo_oro) || 0;
                 const rowData = [
                     String(item.consecutivo).padStart(4, '0'),
                     cfg.text,
@@ -965,7 +1839,8 @@ $page_title = "Listado General de Trazabilidad";
             }
             document.getElementById('filter-estado').addEventListener('change', () => { currentPage = 1; applyFilters(); });
             document.getElementById('filter-operario').addEventListener('change', () => { currentPage = 1; applyFilters(); });
-            document.getElementById('filter-fecha').addEventListener('change', () => { currentPage = 1; applyFilters(); });
+            document.getElementById('filter-desde').addEventListener('change', () => { currentPage = 1; applyFilters(); });
+            document.getElementById('filter-hasta').addEventListener('change', () => { currentPage = 1; applyFilters(); });
 
             // Listener de Logout
             document.getElementById('logout-btn').addEventListener('click', async function (e) {
@@ -1022,6 +1897,10 @@ $page_title = "Listado General de Trazabilidad";
                 if (response.ok) {
                     isAdmin = true;
                     console.log('Usuario identificado como administrador');
+                    // Cargar solicitudes de edición pendientes y mostrar botón con badge
+                    loadPendingEdiciones();
+                    // Refrescar la tabla para mostrar acciones exclusivas de admin
+                    if (trazabilidadDataCache.length > 0) applyFilters();
                 } else {
                     isAdmin = false;
                     console.log('Usuario identificado como operario');

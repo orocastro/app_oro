@@ -140,6 +140,16 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
             vertical-align: middle;
             margin-right: 8px;
         }
+
+        /* En celulares: botones de foto más grandes y fáciles de tocar */
+        @media (max-width: 640px) {
+            .camera-icon,
+            .upload-icon {
+                width: 56px;
+                height: 56px;
+                margin-right: 0;
+            }
+        }
     </style>
 </head>
 
@@ -193,7 +203,7 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
                                     <path d="M0 11l2-2 5 5L18 3l2 2L7 18z" />
                                 </svg>
                             </span>
-                            AGREGAR DEVOLUCIÓN
+                            AGREGAR ENTREGA / DEVOLUCIÓN PARCIAL
                         </label>
                     </div>
                     <div class="text-lg font-bold">
@@ -212,14 +222,27 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
                     </div>
                 </div>
 
-                <!-- Buscar Consecutivo (modo devolución) -->
+                <!-- Dropdown de Ordenes Abiertas (modo devolución) -->
                 <div id="buscar-consecutivo-container" class="hidden mt-3 mb-4">
-                    <label for="buscar_consecutivo" class="block text-gray-700 font-medium mb-2">Buscar Consecutivo:</label>
-                    <div class="flex space-x-2">
-                        <input type="number" id="buscar_consecutivo" class="w-full" placeholder="Ej: 0001" min="1">
-                        <button type="button" id="btn-buscar-consecutivo" class="btn-primary flex-shrink-0 px-4 py-2 text-sm">Buscar</button>
+                    <label for="select_orden_abierta" class="block text-gray-700 font-medium mb-2">Seleccionar Orden:</label>
+                    <select id="select_orden_abierta" class="w-full">
+                        <option value="">Cargando ordenes...</option>
+                    </select>
+                    <p id="trazabilidad-info" class="text-sm mt-1 text-red-500 hidden">No hay ordenes abiertas.</p>
+                    <!-- Selector de tipo de movimiento parcial -->
+                    <div id="tipo-mov-container" class="mt-3">
+                        <label class="block text-gray-700 font-medium mb-2">TIPO DE MOVIMIENTO:</label>
+                        <div class="flex flex-wrap gap-4">
+                            <label class="flex items-center gap-1.5 text-sm cursor-pointer text-gray-700">
+                                <input type="radio" name="tipo_movimiento" value="recibido" checked>
+                                <span>⬇ Devolución (oro que regresa)</span>
+                            </label>
+                            <label class="flex items-center gap-1.5 text-sm cursor-pointer text-gray-700">
+                                <input type="radio" name="tipo_movimiento" value="entrega">
+                                <span>⬆ Entrega parcial (oro que sale)</span>
+                            </label>
+                        </div>
                     </div>
-                    <p id="trazabilidad-info" class="text-sm mt-1 text-red-500 hidden">Consecutivo no encontrado.</p>
                 </div>
 
                 <!-- RESUMEN DE ORDEN (modo devolución) -->
@@ -262,6 +285,13 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
                     <div id="orden-completada-warning" class="hidden mt-3 p-2 bg-yellow-100 border border-yellow-300 text-yellow-800 text-sm rounded text-center font-semibold">
                         ⚠️ Esta orden ya está completada.
                     </div>
+                    <!-- Botón CERRAR ORDEN -->
+                    <div id="cerrar-orden-container" class="hidden mt-3 text-center">
+                        <button type="button" id="btn-cerrar-orden" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg shadow transition">
+                            🔒 CERRAR ORDEN
+                        </button>
+                        <p class="text-xs text-gray-500 mt-1">Al cerrar se calculará la merma final y no se podrán agregar más movimientos.</p>
+                    </div>
                 </div>
 
                 <!-- GRUPO DE CAMPOS DINÁMICOS -->
@@ -284,8 +314,8 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
                             <input type="hidden" id="cantidad" name="cantidad" value="1">
                         </div>
                         <div id="peso-oro-wrapper">
-                            <label for="peso_oro" class="block text-gray-700 font-medium mb-2" id="peso-oro-label">PESO ORO PURO (gr):</label>
-                            <input type="text" inputmode="decimal" id="peso_oro" name="peso_oro" class="w-full" required placeholder="Ej: 100.00">
+                            <label for="peso_oro" class="block text-gray-700 font-medium mb-2" id="peso-oro-label">PESO ORO 18K (gr):</label>
+                            <input type="text" inputmode="decimal" id="peso_oro" name="peso_oro" class="w-full" placeholder="Ej: 100.00">
                         </div>
                         <div id="peso-materiales-wrapper">
                             <label for="peso_materiales" class="block text-gray-700 font-medium mb-2">PESO MATERIALES (gr):</label>
@@ -352,10 +382,16 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
 
                 <!-- FOTOS (Entrega) -->
                 <div id="foto-entrega-container" class="mt-4">
-                    <label class="block text-gray-700 font-medium mb-2">FOTOS (Entrega):</label>
-                    <div class="flex items-center gap-2">
-                        <button type="button" id="btn-camera-entrega" class="camera-icon" title="Tomar foto(s) (Entrega)"></button>
-                        <button type="button" id="btn-upload-entrega" class="upload-icon" title="Subir archivo(s) (Entrega)"></button>
+                    <label class="block text-gray-700 font-medium mb-2">FOTOS (Entrega): <span class="text-red-600 font-bold">*obligatoria</span></label>
+                    <div class="flex items-center gap-3">
+                        <div class="flex flex-col items-center">
+                            <button type="button" id="btn-camera-entrega" class="camera-icon" title="Tomar foto(s) (Entrega)" aria-label="Tomar foto entrega"></button>
+                            <span class="text-xs text-gray-500 mt-1">Cámara</span>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <button type="button" id="btn-upload-entrega" class="upload-icon" title="Subir archivo(s) (Entrega)" aria-label="Subir fotos entrega"></button>
+                            <span class="text-xs text-gray-500 mt-1">Galería</span>
+                        </div>
                         <span id="file-count-entrega" class="text-sm text-gray-500">0 fotos seleccionadas</span>
                     </div>
                     <input type="file" id="foto_entrega" name="foto_entrega[]" accept="image/*" class="hidden" multiple>
@@ -364,10 +400,16 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
 
                 <!-- FOTOS (Devolución) -->
                 <div id="foto-recibido-container" class="hidden mt-4">
-                    <label class="block text-gray-700 font-medium mb-2">FOTOS (Devolución):</label>
-                    <div class="flex items-center gap-2">
-                        <button type="button" id="btn-camera-recibido" class="camera-icon" title="Tomar foto(s) (Devolución)"></button>
-                        <button type="button" id="btn-upload-recibido" class="upload-icon" title="Subir archivo(s) (Devolución)"></button>
+                    <label class="block text-gray-700 font-medium mb-2">FOTOS (Devolución): <span class="text-red-600 font-bold">*obligatoria</span></label>
+                    <div class="flex items-center gap-3">
+                        <div class="flex flex-col items-center">
+                            <button type="button" id="btn-camera-recibido" class="camera-icon" title="Tomar foto(s) (Devolución)" aria-label="Tomar foto devolución"></button>
+                            <span class="text-xs text-gray-500 mt-1">Cámara</span>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <button type="button" id="btn-upload-recibido" class="upload-icon" title="Subir archivo(s) (Devolución)" aria-label="Subir fotos devolución"></button>
+                            <span class="text-xs text-gray-500 mt-1">Galería</span>
+                        </div>
                         <span id="file-count-recibido" class="text-sm text-gray-500">0 fotos seleccionadas</span>
                     </div>
                     <input type="file" id="foto_recibido" name="foto_recibido[]" accept="image/*" class="hidden" multiple>
@@ -394,7 +436,7 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
         </a>
     </footer>
 
-    <script src="<?php echo $base_url; ?>frontend/assets/js/scripts.js"></script>
+    <script src="<?php echo $base_url; ?>frontend/assets/js/scripts.js?v=20261002b"></script>
     <script>
         // --- VARIABLES GLOBALES ---
         const API_PROCESOS = 'procesos';
@@ -458,9 +500,12 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
         const mermaGrInput = document.getElementById('merma_gr');
         const procesoIdRecibidoHidden = document.getElementById('proceso_id_recibido_hidden');
         const buscarConsecutivoContainer = document.getElementById('buscar-consecutivo-container');
-        const buscarConsecutivoInput = document.getElementById('buscar_consecutivo');
-        const btnBuscarConsecutivo = document.getElementById('btn-buscar-consecutivo');
+        const selectOrdenAbierta = document.getElementById('select_orden_abierta');
         const trazabilidadInfo = document.getElementById('trazabilidad-info');
+        const btnCerrarOrden = document.getElementById('btn-cerrar-orden');
+        const cerrarOrdenContainer = document.getElementById('cerrar-orden-container');
+        const modalCierre = document.getElementById('modal-cierre');
+        const btnModalCierreAceptar = document.getElementById('btn-modal-cierre-aceptar');
         const submitButton = document.getElementById('submit-button');
         const pesoEntregadoOriginalInput = document.getElementById('peso_entregado_original');
         const pesoEntregadoOriginalOroInput = document.getElementById('peso_entregado_original_oro');
@@ -503,8 +548,6 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
         let matFilesRecibido = {};
         let matExistingFotosEntrega = {};
         let matExistingFotosRecibido = {};
-        let matInputsEntrega = {};
-        let matInputsRecibido = {};
         let lastCreatedConsecutivo = '';
 
         // --- FUNCIONES DE UTILIDAD (mantenidas) ---
@@ -594,6 +637,10 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
 
         function removeSelectedMaterial(matId) {
             delete materialesSeleccionados[matId];
+            delete matFilesEntrega[matId];
+            delete matFilesRecibido[matId];
+            delete matExistingFotosEntrega[matId];
+            delete matExistingFotosRecibido[matId];
             renderSelectedMaterials();
             updateTotalesDesdeDropdown();
         }
@@ -607,17 +654,58 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
                 container.innerHTML = '<p class="text-sm text-gray-500 italic">Ningun material seleccionado.</p>';
                 return;
             }
+            const isEntrega = matIsEntrega();
+            const filesMap = isEntrega ? matFilesEntrega : matFilesRecibido;
+            const existingMap = isEntrega ? matExistingFotosEntrega : matExistingFotosRecibido;
             ids.forEach(id => {
                 const item = materialesSeleccionados[id];
                 const div = document.createElement('div');
-                div.className = 'flex items-center justify-between p-2 bg-white rounded border border-gray-200';
-                div.innerHTML = `
+                div.className = 'p-2 bg-white rounded border border-gray-200';
+                const header = document.createElement('div');
+                header.className = 'flex items-center justify-between';
+                header.innerHTML = `
                     <span class="text-sm font-medium text-gray-700">${item.nombre}</span>
                     <div class="flex items-center gap-2">
                         <span class="text-sm text-gray-600">${item.peso.toFixed(2)} gr</span>
                         <button type="button" onclick="removeSelectedMaterial('${id}')" class="text-red-500 hover:text-red-700 font-bold text-sm" title="Quitar">&times;</button>
                     </div>
                 `;
+                div.appendChild(header);
+
+                const rowBtns = document.createElement('div');
+                rowBtns.className = 'flex items-center gap-2 mt-2';
+                const camBtn = document.createElement('button');
+                camBtn.type = 'button';
+                camBtn.className = 'camera-icon';
+                camBtn.title = `Tomar foto (${item.nombre})`;
+                const upBtn = document.createElement('button');
+                upBtn.type = 'button';
+                upBtn.className = 'upload-icon';
+                upBtn.title = `Subir foto (${item.nombre})`;
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = 'image/*';
+                fileInput.multiple = true;
+                fileInput.className = 'hidden';
+                const preview = document.createElement('div');
+                preview.className = 'mt-2 grid grid-cols-3 gap-2';
+                camBtn.addEventListener('click', () => { fileInput.setAttribute('capture','environment'); fileInput.click(); });
+                upBtn.addEventListener('click', () => { fileInput.removeAttribute('capture'); fileInput.click(); });
+                fileInput.addEventListener('change', () => {
+                    const store = (filesMap[id] ||= []);
+                    if (fileInput.files && fileInput.files.length > 0) {
+                        Array.from(fileInput.files).forEach(f => store.push(f));
+                    }
+                    renderMaterialPreview(preview, existingMap[id] || [], store);
+                    fileInput.value = '';
+                });
+                rowBtns.appendChild(camBtn);
+                rowBtns.appendChild(upBtn);
+                rowBtns.appendChild(fileInput);
+                div.appendChild(rowBtns);
+
+                renderMaterialPreview(preview, existingMap[id] || [], (filesMap[id] ||= []));
+                div.appendChild(preview);
                 container.appendChild(div);
             });
         }
@@ -636,12 +724,18 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
             const total = Math.round((oro + sumMat) * 100) / 100;
             pesoGrInput.value = String(total.toFixed(2));
 
-            const isEntrega = radioOrden.checked;
+            const isEntrega = matIsEntrega();
             const weightsMap = isEntrega ? matWeightsEntrega : matWeightsRecibido;
             Object.keys(weightsMap).forEach(k => delete weightsMap[k]);
             Object.entries(materialesSeleccionados).forEach(([id, item]) => {
                 weightsMap[id] = item.peso;
             });
+
+            const hasAny = Object.values(weightsMap).some(v => Number(v || 0) > 0);
+            if (typeof updatePesoHintAndReadonly === 'function') updatePesoHintAndReadonly(hasAny);
+            if (!isEntrega && typeof calcularMermaEnVivo === 'function') {
+                calcularMermaEnVivo();
+            }
         }
         // =====================================
 
@@ -651,15 +745,23 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
             const existingMap = isEntrega ? matExistingFotosEntrega : matExistingFotosRecibido;
             Object.keys(weightsMap).forEach(k => { delete weightsMap[k]; });
             Object.keys(existingMap).forEach(k => { delete existingMap[k]; });
+            materialesSeleccionados = {};
             if (Array.isArray(items)) {
                 items.forEach(it => {
                     const id = it.material_id;
                     if (!id) return;
                     const num = Number(it.peso || 0);
-                    weightsMap[id] = Number.isFinite(num) ? num : 0;
+                    const peso = Number.isFinite(num) ? num : 0;
+                    weightsMap[id] = peso;
                     existingMap[id] = Array.isArray(it.fotos) ? it.fotos : [];
+                    const mat = materialesCatalog.find(m => String(m.id) === String(id));
+                    if (peso > 0 || (existingMap[id] || []).length > 0) {
+                        materialesSeleccionados[id] = { nombre: mat ? mat.nombre : ('Material #' + id), peso: peso };
+                    }
                 });
             }
+            renderSelectedMaterials();
+            updateTotalesDesdeDropdown();
         }
 
         function updateAndPreviewImages(input) {
@@ -748,10 +850,15 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
                 mermaGrInput.value = 'NULL';
                 return;
             }
-            let oroRecibido = normalizarNumero(pesoOroInput.value);
-            const oroOriginal = normalizarNumero(pesoEntregadoOriginalOroInput.value);
-            if (Number.isFinite(oroOriginal) && Number.isFinite(oroRecibido)) {
-                const merma = oroOriginal - oroRecibido;
+            let oroRecibido = normalizarNumero(pesoOroInput.value) || 0;
+            const oroOriginal = normalizarNumero(pesoEntregadoOriginalOroInput.value) || 0;
+            const matOriginal = normalizarNumero(pesoEntregadoOriginalMatInput.value) || 0;
+            // Usar el valor del campo de materiales (que se actualiza del dropdown)
+            const matRecibido = normalizarNumero(pesoMaterialesInput.value) || 0;
+            const totalEntregado = oroOriginal + matOriginal;
+            const totalRecibido = oroRecibido + matRecibido;
+            if (Number.isFinite(totalEntregado) && Number.isFinite(totalRecibido)) {
+                const merma = totalEntregado - totalRecibido;
                 mermaGrInput.value = formatDecimalComma(merma, 2);
                 updateMermaIndicator(merma);
             } else {
@@ -759,7 +866,10 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
                 updateMermaIndicator(0);
             }
         }
-        pesoOroInput.addEventListener('input', calcularMermaEnVivo);
+        pesoOroInput.addEventListener('input', () => {
+            calcularMermaEnVivo();
+            updateTotalesDesdeMateriales();
+        });
 
         function setupPhotoButtons(cameraBtnId, uploadBtnId, fileInputId) {
             const cameraBtn = document.getElementById(cameraBtnId);
@@ -776,109 +886,6 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
             fileInput.addEventListener('change', () => {
                 updateAndPreviewImages(fileInput);
             });
-        }
-
-        function renderMaterialesUI(modo) {
-            const isEntrega = modo === 'entrega';
-            let container = document.getElementById('materiales-container');
-            if (!container) {
-                container = document.createElement('div');
-                container.id = 'materiales-container';
-                container.className = 'mt-4 p-4 border border-gray-300 rounded-lg bg-gray-50';
-                const anchor = document.getElementById('observaciones').parentElement;
-                anchor.parentElement.insertBefore(container, anchor);
-            }
-            container.innerHTML = '';
-            const title = document.createElement('h3');
-            title.className = 'text-lg font-semibold mb-3 text-gray-700';
-            title.textContent = isEntrega ? 'Materiales (Entrega)' : 'Materiales (Devolución)';
-            container.appendChild(title);
-            if (!materialesCatalog || materialesCatalog.length === 0) {
-                const p = document.createElement('p');
-                p.className = 'text-sm text-gray-500';
-                p.textContent = 'No hay materiales registrados.';
-                container.appendChild(p);
-                return;
-            }
-            const grid = document.createElement('div');
-            grid.className = 'grid grid-cols-1 sm:grid-cols-2 gap-4';
-            const inputsMap = isEntrega ? matInputsEntrega : matInputsRecibido;
-            Object.keys(inputsMap).forEach(k => { delete inputsMap[k]; });
-            const weightsMap = isEntrega ? matWeightsEntrega : matWeightsRecibido;
-            const existingFotosMap = isEntrega ? matExistingFotosEntrega : matExistingFotosRecibido;
-            materialesCatalog.forEach(mat => {
-                const matId = mat.id;
-                const card = document.createElement('div');
-                card.className = 'p-3 bg-white rounded border border-gray-200';
-                const label = document.createElement('label');
-                label.className = 'block text-gray-700 font-medium';
-                label.textContent = mat.nombre;
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.inputMode = 'decimal';
-                input.placeholder = 'Peso (gr)';
-                input.className = 'w-full mt-2';
-                const currentWeight = weightsMap[matId];
-                if (currentWeight !== undefined && currentWeight !== null && currentWeight !== '') {
-                    const num = Number(currentWeight);
-                    input.value = Number.isFinite(num) ? num.toFixed(2) : String(currentWeight);
-                } else {
-                    input.value = '';
-                }
-                inputsMap[matId] = input;
-                input.addEventListener('input', () => {
-                    const val = String(input.value).replace(',', '.');
-                    const num = Number(val);
-                    if (isEntrega) {
-                        matWeightsEntrega[matId] = Number.isFinite(num) ? num : 0;
-                    } else {
-                        matWeightsRecibido[matId] = Number.isFinite(num) ? num : 0;
-                    }
-                    updateTotalesDesdeMateriales();
-                });
-                const rowBtns = document.createElement('div');
-                rowBtns.className = 'flex items-center gap-2 mt-2';
-                const camBtn = document.createElement('button');
-                camBtn.type = 'button';
-                camBtn.className = 'camera-icon';
-                camBtn.title = `Tomar foto (${mat.nombre})`;
-                const upBtn = document.createElement('button');
-                upBtn.type = 'button';
-                upBtn.className = 'upload-icon';
-                upBtn.title = `Subir foto (${mat.nombre})`;
-                const fileInput = document.createElement('input');
-                fileInput.type = 'file';
-                fileInput.accept = 'image/*';
-                fileInput.multiple = true;
-                fileInput.id = `material_file_${matId}`;
-                fileInput.className = 'hidden';
-                const preview = document.createElement('div');
-                preview.id = `preview_mat_${matId}`;
-                preview.className = 'mt-2 grid grid-cols-3 gap-2';
-                camBtn.addEventListener('click', () => { fileInput.setAttribute('capture','environment'); fileInput.click(); });
-                upBtn.addEventListener('click', () => { fileInput.removeAttribute('capture'); fileInput.click(); });
-                fileInput.addEventListener('change', () => {
-                    const store = isEntrega ? (matFilesEntrega[matId] ||= []) : (matFilesRecibido[matId] ||= []);
-                    if (fileInput.files && fileInput.files.length > 0) {
-                        Array.from(fileInput.files).forEach(f => store.push(f));
-                    }
-                    const existing = existingFotosMap[matId] || [];
-                    renderMaterialPreview(preview, existing, store);
-                    fileInput.value = '';
-                });
-                rowBtns.appendChild(camBtn);
-                rowBtns.appendChild(upBtn);
-                rowBtns.appendChild(fileInput);
-                card.appendChild(label);
-                card.appendChild(input);
-                card.appendChild(rowBtns);
-                const existing = existingFotosMap[matId] || [];
-                const store = isEntrega ? (matFilesEntrega[matId] ||= []) : (matFilesRecibido[matId] ||= []);
-                renderMaterialPreview(preview, existing, store);
-                card.appendChild(preview);
-                grid.appendChild(card);
-            });
-            container.appendChild(grid);
         }
 
         function renderMaterialPreview(container, existingPhotos, files) {
@@ -916,7 +923,7 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
         }
 
         function updateTotalesDesdeMateriales() {
-            const isEntrega = radioOrden.checked;
+            const isEntrega = matIsEntrega();
             const weights = isEntrega ? matWeightsEntrega : matWeightsRecibido;
             let sumMat = 0;
             Object.keys(weights).forEach(k => { const v = Number(weights[k]||0); if (Number.isFinite(v)) sumMat += v; });
@@ -940,10 +947,15 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
                 mermaGrInput.value = 'NULL';
                 return;
             }
-            const oroOriginal = normalizarNumero(pesoEntregadoOriginalOroInput.value);
-            const oroRecibido = normalizarNumero(pesoOroInput.value) || 0;
-            if (Number.isFinite(oroOriginal) && Number.isFinite(oroRecibido)) {
-                const merma = oroOriginal - oroRecibido;
+            const oroOriginal = normalizarNumero(pesoEntregadoOriginalOroInput.value) || 0;
+            const matOriginal = normalizarNumero(pesoEntregadoOriginalMatInput.value) || 0;
+            const totalEntregado = oroOriginal + matOriginal;
+            const totalRecibido = Number(pesoRecibidoCalc) || 0;
+            if (Number.isFinite(totalEntregado) && Number.isFinite(totalRecibido)) {
+                // Incluir materiales en el calculo de merma
+                const matRecibido = Object.values(matWeightsRecibido).reduce((sum, w) => sum + (Number(w) || 0), 0);
+                const totalConMateriales = totalRecibido + matRecibido;
+                const merma = totalEntregado - totalConMateriales;
                 mermaGrInput.value = formatDecimalComma(merma, 2);
                 updateMermaIndicator(merma);
             } else {
@@ -953,7 +965,7 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
         }
 
         function hasAnyMaterialWeight() {
-            const weights = radioOrden.checked ? matWeightsEntrega : matWeightsRecibido;
+            const weights = matIsEntrega() ? matWeightsEntrega : matWeightsRecibido;
             return Object.values(weights).some(v => Number(v||0) > 0);
         }
 
@@ -988,6 +1000,39 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
             }
         }
 
+        // === TIPO DE MOVIMIENTO PARCIAL (entrega / devolución) en orden existente ===
+        function getTipoMovimiento() {
+            const r = document.querySelector('input[name="tipo_movimiento"]:checked');
+            return r ? r.value : 'recibido';
+        }
+
+        // Determina si los materiales/pesos van al lado de ENTREGA (orden nueva o entrega parcial)
+        function matIsEntrega() {
+            return radioOrden.checked || getTipoMovimiento() === 'entrega';
+        }
+
+        function refreshTipoMovimientoUI() {
+            const isOrden = radioOrden.checked;
+            const oroLabel = document.getElementById('peso-oro-label');
+            if (isOrden) {
+                if (oroLabel) oroLabel.textContent = 'PESO ORO 18K (gr):';
+                fotoEntregaContainer.classList.remove('hidden');
+                fotoRecibidoContainer.classList.add('hidden');
+                // Re-rutear materiales al lado de entrega y refrescar totales
+                renderSelectedMaterials();
+                updateTotalesDesdeDropdown();
+                return;
+            }
+            const tipo = getTipoMovimiento();
+            if (oroLabel) oroLabel.textContent = tipo === 'entrega' ? 'PESO ORO 18K ENTREGADO (gr):' : 'PESO ORO 18K RECIBIDO (gr):';
+            if (submitButton && !submitButton.disabled) submitButton.textContent = tipo === 'entrega' ? 'REGISTRAR ENTREGA' : 'REGISTRAR DEVOLUCIÓN';
+            fotoEntregaContainer.classList.toggle('hidden', tipo !== 'entrega');
+            fotoRecibidoContainer.classList.toggle('hidden', tipo !== 'recibido');
+            // Re-rutear materiales al lado correcto (entrega/devolución) y refrescar totales
+            renderSelectedMaterials();
+            updateTotalesDesdeDropdown();
+        }
+
         function setMode(mode) {
             const isOrden = mode === 'orden';
             radioOrdenCustom.querySelector('svg').classList.toggle('hidden', !isOrden);
@@ -1013,6 +1058,10 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
                 submitButton.disabled = false;
                 submitButton.textContent = 'REGISTRAR ORDEN';
                 fechaContainer.hidden = false;
+                fechaInput.type = 'text';
+                fechaInput.readOnly = true;
+                fechaInput.classList.add('bg-gray-100', 'cursor-default');
+                fechaLabel.textContent = 'FECHA:';
                 const now = getCurrentDateTime();
                 fechaInput.value = now.display;
                 fechaHiddenInput.value = now.iso;
@@ -1021,15 +1070,23 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
                 consecutivoInput.value = '';
                 consecutivoDisplay.classList.remove('bg-gray-100', 'cursor-default');
                 submitButton.disabled = true;
-                submitButton.textContent = 'REGISTRAR DEVOLUCIÓN';
-                fechaContainer.hidden = true;
+                submitButton.textContent = 'REGISTRAR PARCIAL';
+                // Fecha y hora automáticas al abrir el formulario (para medir tiempos de trabajo)
+                fechaContainer.hidden = false;
+                fechaInput.type = 'text';
+                fechaInput.readOnly = true;
+                fechaInput.classList.add('bg-gray-100', 'cursor-default');
+                fechaLabel.textContent = 'FECHA Y HORA:';
+                const now = getCurrentDateTime();
+                fechaInput.value = now.display;
+                fechaHiddenInput.value = now.iso;
+                cerrarOrdenContainer.classList.add('hidden');
+                loadOrdenesAbiertas();
             }
 
             const oroLabel = document.getElementById('peso-oro-label');
-            if (oroLabel) oroLabel.textContent = isOrden ? 'PESO ORO PURO (gr):' : 'PESO ORO DEVUELTO (gr):';
-            fotoEntregaContainer.classList.toggle('hidden', !isOrden);
-            fotoRecibidoContainer.classList.toggle('hidden', isOrden);
-            mermaContainer.classList.add('hidden');
+            refreshTipoMovimientoUI();
+            mermaContainer.classList.add('hidden'); // Merma oculta hasta cerrar orden
             buscarConsecutivoContainer.classList.toggle('hidden', isOrden);
             entregaDataRecibido.classList.add('hidden');
 
@@ -1044,24 +1101,27 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
             cantidadInput.disabled = false;
             cantidadInput.required = false;
 
-            pesoOroInput.required = true;
-            buscarConsecutivoInput.required = !isOrden;
+            pesoOroInput.required = false;
+            selectOrdenAbierta.required = !isOrden;
 
             fileStoreEntrega = [];
             fileStoreRecibido = [];
             updateAndPreviewImages(inputFotoEntrega);
             updateAndPreviewImages(inputFotoRecibido);
 
-            // NUEVO: Limpiar dropdown de materiales
+            // Limpiar dropdown de materiales y sus fotos
             materialesSeleccionados = {};
+            matWeightsEntrega = {};
+            matWeightsRecibido = {};
+            matFilesEntrega = {};
+            matFilesRecibido = {};
+            matExistingFotosEntrega = {};
+            matExistingFotosRecibido = {};
             renderSelectedMaterials();
 
-            renderMaterialesUI(isOrden ? 'entrega' : 'recibido');
-            fileStoreRecibido = [];
-            updateAndPreviewImages(inputFotoEntrega);
-            updateAndPreviewImages(inputFotoRecibido);
+            const gridContainer = document.getElementById('materiales-container');
+            if (gridContainer) gridContainer.remove();
 
-            renderMaterialesUI(isOrden ? 'entrega' : 'recibido');
             updatePesoHintAndReadonly(hasAnyMaterialWeight());
 
             if (!isOrden) {
@@ -1099,7 +1159,7 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
             const matEntregado = Number(data.total_mat_entregado || data.materiales_entregados || 0);
             const matRecibido = Number(data.total_mat_recibido || data.materiales_recibidos || 0);
             const saldoOro = oroEntregado - oroRecibido;
-            const mermaVal = saldoOro;
+            const mermaVal = (oroEntregado + matEntregado) - (oroRecibido + matRecibido);
             if (summaryOroEntregado) summaryOroEntregado.textContent = formatDecimalComma(oroEntregado, 2);
             if (summaryOroRecibido) summaryOroRecibido.textContent = formatDecimalComma(oroRecibido, 2);
             if (summarySaldoOro) {
@@ -1146,20 +1206,25 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
 
         async function loadOrdenData(consecutivo) {
             if (!consecutivo) return;
-            btnBuscarConsecutivo.disabled = true;
-            btnBuscarConsecutivo.textContent = 'Buscando...';
             trazabilidadInfo.classList.add('hidden');
             ordenSummary.classList.add('hidden');
             ordenCompletadaWarning.classList.add('hidden');
             submitButton.disabled = true;
+            cerrarOrdenContainer.classList.add('hidden');
             const result = await callApi(`${API_ORDENES}/${consecutivo}`, 'GET');
-            btnBuscarConsecutivo.disabled = false;
-            btnBuscarConsecutivo.textContent = 'Buscar';
             if (result.success && result.data) {
                 consecutivoDisplay.textContent = String(consecutivo).padStart(4, '0');
                 consecutivoInput.value = consecutivo;
                 renderOrdenSummary(result.data);
-                submitButton.disabled = (result.data.estado === 'completado');
+                const isCerrada = result.data.estado === 'cerrada';
+                submitButton.disabled = isCerrada || (result.data.estado === 'completado');
+                if (isCerrada) {
+                    submitButton.textContent = 'ORDEN CERRADA';
+                    cerrarOrdenContainer.classList.add('hidden');
+                } else {
+                    refreshTipoMovimientoUI();
+                    cerrarOrdenContainer.classList.remove('hidden');
+                }
                 try {
                     const mats = await callApi(`trazabilidad/materiales/${consecutivo}`, 'GET');
                     if (mats.success && mats.data) {
@@ -1168,8 +1233,6 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
                         const prefList = (recibidoList.length > 0) ? recibidoList : entregaList;
                         matFilesRecibido = {};
                         setMaterialesStateFromDB('recibido', prefList);
-                        renderMaterialesUI('recibido');
-                        updateTotalesDesdeMateriales();
                     }
                 } catch (e) {
                     console.warn('No se pudieron cargar materiales del consecutivo:', e);
@@ -1189,21 +1252,102 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
             }
         }
 
-        async function buscarConsecutivo() {
-            const consecutivo = buscarConsecutivoInput.value.trim();
+        async function loadOrdenesAbiertas() {
+            if (!selectOrdenAbierta) return;
+            selectOrdenAbierta.innerHTML = '<option value="">Cargando ordenes...</option>';
+            try {
+                const result = await callApi('ordenes/abiertas', 'GET');
+                if (result.success && Array.isArray(result.data)) {
+                    if (result.data.length === 0) {
+                        selectOrdenAbierta.innerHTML = '<option value="">No hay ordenes abiertas</option>';
+                        trazabilidadInfo.textContent = 'No hay ordenes abiertas.';
+                        trazabilidadInfo.classList.remove('hidden');
+                        return;
+                    }
+                    selectOrdenAbierta.innerHTML = '<option value="">Seleccione una orden...</option>';
+                    result.data.forEach(ord => {
+                        const option = document.createElement('option');
+                        option.value = ord.consecutivo;
+                        const label = `#${String(ord.consecutivo).padStart(4,'0')} - ${ord.responsable_nombre || '-'} - ${ord.producto_nombre || '-'} (${parseFloat(ord.total_entregado || 0).toFixed(2)} gr)`;
+                        option.textContent = label;
+                        selectOrdenAbierta.appendChild(option);
+                    });
+                    trazabilidadInfo.classList.add('hidden');
+                } else {
+                    selectOrdenAbierta.innerHTML = '<option value="">Error al cargar</option>';
+                }
+            } catch (e) {
+                selectOrdenAbierta.innerHTML = '<option value="">Error al cargar</option>';
+            }
+        }
+
+        async function onSelectOrdenChange() {
+            const consecutivo = selectOrdenAbierta.value;
             if (!consecutivo) {
-                showMessageModal('Búsqueda', 'Ingrese un número de consecutivo válido.', 'info');
+                ordenSummary.classList.add('hidden');
+                cerrarOrdenContainer.classList.add('hidden');
+                submitButton.disabled = true;
                 return;
             }
             await loadOrdenData(consecutivo);
+        }
+
+        async function cerrarOrden() {
+            const consecutivo = consecutivoInput.value;
+            if (!consecutivo) return;
+            if (!await confirmModal('Cerrar Orden', '¿Está seguro de cerrar esta orden? No se podrán agregar más movimientos.', { danger: false })) return;
+            
+            btnCerrarOrden.disabled = true;
+            btnCerrarOrden.textContent = 'Cerrando...';
+            
+            try {
+                const result = await callApi(`ordenes/${consecutivo}/cerrar`, 'POST');
+                if (result.success) {
+                    document.getElementById('modal-cierre-consecutivo').textContent = String(consecutivo).padStart(4, '0');
+                    document.getElementById('modal-cierre-entregado').textContent = parseFloat(result.data.total_entregado || 0).toFixed(2);
+                    document.getElementById('modal-cierre-recibido').textContent = parseFloat(result.data.total_recibido || 0).toFixed(2);
+                    const merma = parseFloat(result.data.merma || 0);
+                    const mermaEl = document.getElementById('modal-cierre-merma');
+                    const mermaTexto = document.getElementById('modal-cierre-merma-texto');
+                    mermaEl.textContent = Math.abs(merma).toFixed(2) + ' gr';
+                    if (merma < 0) {
+                        mermaEl.className = 'text-3xl font-bold text-green-600';
+                        mermaTexto.textContent = 'Merma a favor (se recibio mas de lo entregado)';
+                    } else if (merma > 0) {
+                        mermaEl.className = 'text-3xl font-bold text-red-600';
+                        mermaTexto.textContent = 'Merma (perdida de material)';
+                    } else {
+                        mermaEl.className = 'text-3xl font-bold text-blue-700';
+                        mermaTexto.textContent = 'Sin merma';
+                    }
+                    modalCierre.classList.remove('hidden');
+                    modalCierre.classList.add('flex');
+                    submitButton.disabled = true;
+                    submitButton.textContent = 'ORDEN CERRADA';
+                    cerrarOrdenContainer.classList.add('hidden');
+                } else {
+                    showMessageModal('Error', result.message || 'No se pudo cerrar la orden.', 'error');
+                }
+            } catch (e) {
+                showMessageModal('Error', 'Error de conexion al cerrar la orden.', 'error');
+            } finally {
+                btnCerrarOrden.disabled = false;
+                btnCerrarOrden.textContent = '🔒 CERRAR ORDEN';
+            }
         }
 
         async function submitOrden() {
             const fileStore = fileStoreEntrega;
             const fotoInputName = 'foto_entrega[]';
             if (fileStore.length === 0) {
-                // Foto es opcional - solo advertencia, no bloquear
-                console.log('Advertencia: No se subió foto, pero continuando...');
+                showMessageModal('Foto Obligatoria', 'Debe tomar o subir al menos una foto de la entrega para registrar la orden.', 'error');
+                return false;
+            }
+            const oroValOrden = normalizarNumero(pesoOroInput.value) || 0;
+            const hayMaterialesOrden = Object.keys(materialesSeleccionados).length > 0;
+            if (oroValOrden <= 0 && !hayMaterialesOrden) {
+                showMessageModal('Error de Validación', 'Ingrese el peso de oro o agregue al menos un material.', 'error');
+                return false;
             }
             submitButton.disabled = true;
             const originalText = submitButton.textContent;
@@ -1214,9 +1358,9 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
             formData.append('producto_id', productoSelect.value);
             formData.append('responsable_id', responsableSelect.value);
             formData.append('cantidad', cantidadInput.value);
-            let pesoOro = String(pesoOroInput.value).replace(',', '.');
-            let pesoMat = String(pesoMaterialesInput.value).replace(',', '.');
-            let pesoTotal = String(pesoGrInput.value).replace(',', '.');
+            let pesoOro = String(pesoOroInput.value || '0').replace(',', '.');
+            let pesoMat = String(pesoMaterialesInput.value || '0').replace(',', '.');
+            let pesoTotal = String(pesoGrInput.value || '0').replace(',', '.');
             formData.append('peso_oro', pesoOro);
             formData.append('peso_materiales', pesoMat);
             formData.append('peso_gr', pesoTotal);
@@ -1273,25 +1417,32 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
                 showMessageModal('Error', 'Debe buscar una orden válida.', 'error');
                 return false;
             }
-            const fileStore = fileStoreRecibido;
-            const fotoInputName = 'foto_recibido[]';
+            const tipo = getTipoMovimiento();
+            const isEntregaParcial = tipo === 'entrega';
+            const fileStore = isEntregaParcial ? fileStoreEntrega : fileStoreRecibido;
+            const fotoInputName = isEntregaParcial ? 'foto_entrega[]' : 'foto_recibido[]';
             if (fileStore.length === 0) {
-                // Foto es opcional - solo advertencia, no bloquear
-                console.log('Advertencia: No se subió foto, pero continuando...');
+                const tipoTxt = isEntregaParcial ? 'la entrega' : 'la devolución';
+                showMessageModal('Foto Obligatoria', `Debe tomar o subir al menos una foto de ${tipoTxt} para registrar el movimiento.`, 'error');
+                return false;
             }
-            if (!pesoOroInput.value.trim()) {
-                showMessageModal('Error de Validación', 'Ingrese el peso de oro devuelto.', 'error');
+            const oroVal = normalizarNumero(pesoOroInput.value) || 0;
+            const hayMateriales = Object.keys(materialesSeleccionados).length > 0;
+            if (oroVal <= 0 && !hayMateriales) {
+                showMessageModal('Error de Validación', 'Ingrese el peso de oro o agregue los materiales.', 'error');
                 return false;
             }
             submitButton.disabled = true;
             const originalText = submitButton.textContent;
-            submitButton.textContent = 'Registrando Devolución...';
+            submitButton.textContent = isEntregaParcial ? 'Registrando Entrega...' : 'Registrando Devolución...';
             const formData = new FormData();
-            formData.append('consecutivo', consecutivo);
-            formData.append('tipo', 'recibido');
-            let pesoOro = String(pesoOroInput.value).replace(',', '.');
-            let pesoMat = String(pesoMaterialesInput.value).replace(',', '.');
-            let pesoTotal = String(pesoGrInput.value).replace(',', '.');
+            formData.append('consecutivo', consecutivoInput.value);
+            formData.append('tipo', tipo);
+            formData.append('fecha', fechaHiddenInput.value || '');
+            formData.append('fecha_movimiento_hidden', fechaHiddenInput.value || '');
+            let pesoOro = String(pesoOroInput.value || '0').replace(',', '.');
+            let pesoMat = String(pesoMaterialesInput.value || '0').replace(',', '.');
+            let pesoTotal = String(pesoGrInput.value || '0').replace(',', '.');
             formData.append('peso_oro', pesoOro);
             formData.append('peso_materiales', pesoMat);
             formData.append('peso_gr', pesoTotal);
@@ -1299,8 +1450,8 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
             fileStore.forEach(file => {
                 formData.append(fotoInputName, file, file.name);
             });
-            const weights = matWeightsRecibido;
-            const filesMap = matFilesRecibido;
+            const weights = isEntregaParcial ? matWeightsEntrega : matWeightsRecibido;
+            const filesMap = isEntregaParcial ? matFilesEntrega : matFilesRecibido;
             const materialesPayload = [];
             materialesCatalog.forEach(mat => {
                 const id = mat.id;
@@ -1323,19 +1474,31 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
                 const result = await response.json();
                 if (result.success) {
                     const estado = result.data?.estado || result.estado;
+                    const tipoTxt = isEntregaParcial ? 'Entrega parcial' : 'Devolución';
                     if (estado === 'completado') {
-                        showMessageModal('Orden Finalizada', `Devolución registrada. La orden #${String(consecutivo).padStart(4,'0')} está completada.`, 'success');
+                        showMessageModal('Orden Finalizada', `${tipoTxt} registrada. La orden #${String(consecutivo).padStart(4,'0')} está completada.`, 'success');
                     } else {
-                        showMessageModal('Éxito', 'Devolución registrada correctamente.', 'success');
+                        showMessageModal('Éxito', tipoTxt + ' registrada correctamente.', 'success');
                     }
                     await loadOrdenData(consecutivo);
-                    fileStoreRecibido = [];
-                    updateAndPreviewImages(inputFotoRecibido);
+                    if (isEntregaParcial) {
+                        fileStoreEntrega = [];
+                        updateAndPreviewImages(inputFotoEntrega);
+                        matFilesEntrega = {};
+                        matWeightsEntrega = {};
+                        matExistingFotosEntrega = {};
+                    } else {
+                        fileStoreRecibido = [];
+                        updateAndPreviewImages(inputFotoRecibido);
+                        matFilesRecibido = {};
+                        matWeightsRecibido = {};
+                        matExistingFotosRecibido = {};
+                    }
                     document.getElementById('observaciones').value = '';
                     pesoOroInput.value = '';
-                    matFilesRecibido = {};
-                    matWeightsRecibido = {};
-                    renderMaterialesUI('recibido');
+                    materialesSeleccionados = {};
+                    renderSelectedMaterials();
+                    updateTotalesDesdeDropdown();
                     updatePesoHintAndReadonly(false);
                 } else {
                     showMessageModal('Error de Registro', result.message || 'Error desconocido al registrar la devolución.', 'error');
@@ -1354,13 +1517,36 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
         document.querySelectorAll('input[name="modo"]').forEach(radio => {
             radio.addEventListener('change', (e) => setMode(e.target.value));
         });
-        btnBuscarConsecutivo.addEventListener('click', buscarConsecutivo);
-        buscarConsecutivoInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                buscarConsecutivo();
-            }
+        // Al cambiar la fecha en modo devolución (calendario), actualizar el ISO oculto
+        if (fechaInput) {
+            fechaInput.addEventListener('change', () => {
+                if (fechaInput.type === 'date' && fechaInput.value) {
+                    fechaHiddenInput.value = fechaInput.value + ' ' +
+                        String(new Date().getHours()).padStart(2, '0') + ':' +
+                        String(new Date().getMinutes()).padStart(2, '0') + ':00';
+                }
+            });
+        }
+        if (selectOrdenAbierta) {
+            selectOrdenAbierta.addEventListener('change', onSelectOrdenChange);
+        }
+        // Cambiar tipo de movimiento parcial (entrega / devolución)
+        document.querySelectorAll('input[name="tipo_movimiento"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                refreshTipoMovimientoUI();
+                pesoOroInput.focus();
+            });
         });
+        if (btnCerrarOrden) {
+            btnCerrarOrden.addEventListener('click', cerrarOrden);
+        }
+        if (btnModalCierreAceptar) {
+            btnModalCierreAceptar.addEventListener('click', () => {
+                modalCierre.classList.add('hidden');
+                modalCierre.classList.remove('flex');
+                setMode('orden');
+            });
+        }
 
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -1375,7 +1561,7 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
             if (!lastCreatedConsecutivo) return;
             successBanner.classList.add('hidden');
             setMode('devolucion');
-            buscarConsecutivoInput.value = lastCreatedConsecutivo;
+            selectOrdenAbierta.value = lastCreatedConsecutivo;
             loadOrdenData(lastCreatedConsecutivo);
         });
         document.getElementById('btn-success-otra').addEventListener('click', () => {
@@ -1405,7 +1591,7 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
                         setMode('devolucion');
                         const consecClean = String(consecParam).replace(/\D+/g, '');
                         if (consecClean) {
-                            buscarConsecutivoInput.value = consecClean;
+                            selectOrdenAbierta.value = consecClean;
                             loadOrdenData(consecClean);
                         }
                     } else {
@@ -1428,6 +1614,29 @@ $page_title = "Registro de Trazabilidad | Trazabilidad";
             });
         };
     </script>
+
+    <!-- Modal: Resultado de Cierre de Orden -->
+    <div id="modal-cierre" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4 text-center">
+            <div class="mb-4">
+                <div class="text-5xl mb-2">🔒</div>
+                <h2 class="text-xl font-bold text-gray-800">Orden Cerrada</h2>
+            </div>
+            <div class="bg-gray-100 rounded-lg p-4 mb-4">
+                <p class="text-sm text-gray-600">Orden #<span id="modal-cierre-consecutivo" class="font-bold">0000</span></p>
+                <div class="grid grid-cols-2 gap-2 mt-2 text-sm">
+                    <div>Entregado: <span id="modal-cierre-entregado" class="font-bold">0.00</span> gr</div>
+                    <div>Recibido: <span id="modal-cierre-recibido" class="font-bold">0.00</span> gr</div>
+                </div>
+            </div>
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <p class="text-sm text-gray-600">MERMA FINAL</p>
+                <p id="modal-cierre-merma" class="text-3xl font-bold text-blue-700">0.00 gr</p>
+                <p id="modal-cierre-merma-texto" class="text-xs text-gray-500 mt-1"></p>
+            </div>
+            <button type="button" id="btn-modal-cierre-aceptar" class="btn-primary w-full">Aceptar</button>
+        </div>
+    </div>
 </body>
 
 </html>

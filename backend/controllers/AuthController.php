@@ -57,11 +57,18 @@ class AuthController {
 
         try {
             if (class_exists('Logger')) { Logger::info('Login attempt', ['usuario' => $usuario, 'ip' => $_SERVER['REMOTE_ADDR'] ?? '']); }
-            $stmt = $this->db->prepare("SELECT id, nombre, clave, rol FROM Usuarios WHERE usuario = ?");
+            $stmt = $this->db->prepare("SELECT id, nombre, clave, rol, activo FROM Usuarios WHERE usuario = ?");
             $stmt->execute([$usuario]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($user && password_verify($clave, $user['clave'])) {
+                // Verificar que el usuario siga activo antes de crear la sesión
+                if ((int)($user['activo'] ?? 1) !== 1) {
+                    if (class_exists('Logger')) { Logger::warn('Login bloqueado: usuario inactivo', ['usuario' => $usuario, 'user_id' => $user['id']]); }
+                    http_response_code(403); // Forbidden
+                    echo json_encode(['success' => false, 'message' => 'Usuario inactivo. Contacte al administrador.'], JSON_UNESCAPED_UNICODE);
+                    return;
+                }
                 // Login exitoso. Creamos una sesión simple.
                 SessionManager::set('user_id', $user['id']);
                 SessionManager::set('user_nombre', $user['nombre']);

@@ -1,0 +1,433 @@
+<?php
+// PHP include file. Requiere que $base_url esté definido en index.php
+require_once __DIR__ . '/../backend/controllers/AuthController.php';
+// Protección de ruta: Si no está logueado, redirigir al login
+if (!SessionManager::get('logged_in')) {
+    header('Location: ' . $base_url);
+    exit();
+}
+$page_title = "Órdenes Abiertas | Trazabilidad";
+?>
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+        <?php echo $page_title; ?>
+    </title>
+    <link rel="stylesheet" href="<?php echo $base_url; ?>frontend/assets/css/styles.css">
+    <style>
+        .table-container {
+            overflow-x: auto;
+            max-width: 100%;
+        }
+
+        .bandeja-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 720px;
+        }
+
+        .bandeja-table th,
+        .bandeja-table td {
+            padding: 8px 10px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 0.875rem;
+            white-space: nowrap;
+        }
+
+        .bandeja-table th {
+            background-color: #234B46;
+            color: #ffffff;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+        }
+
+        .bandeja-table td.num,
+        .bandeja-table th.num {
+            text-align: right;
+        }
+
+        .bandeja-table tr:nth-child(even) { background-color: #f9fafb; }
+        .bandeja-table tr:hover { background-color: #f3f4f6; }
+
+        /* Resaltar a la persona con más adeudado */
+        .bandeja-table tr.top-deudor td {
+            background-color: #fef3c7;
+            font-weight: 600;
+        }
+
+        .badge-mayor {
+            background-color: #b45309;
+            color: #ffffff;
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 9999px;
+            margin-left: 6px;
+            text-transform: uppercase;
+        }
+
+        /* Tarjetas KPI */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+
+        @media (min-width: 768px) {
+            .kpi-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        .kpi-card {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 0.875rem 1rem;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .kpi-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #6b7c78;
+            margin-bottom: 0.25rem;
+        }
+
+        .kpi-value {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #22302E;
+            line-height: 1.2;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-pending {
+            background-color: #fef3c7;
+            color: #b45309;
+        }
+
+        .status-partial {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .status-completed {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-cancelled {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-merma-favor {
+            background-color: #f3e8ff;
+            color: #7c3aed;
+        }
+
+        .saldo-pendiente {
+            background-color: #fff7ed;
+            color: #c2410c;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .saldo-cero {
+            background-color: #ecfdf5;
+            color: #065f46;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .table-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .table-section h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #22302E;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-200 flex flex-col min-h-screen">
+
+    <!-- Navbar/Header -->
+    <header
+        class="fixed top-0 left-0 right-0 p-4 shadow-md text-white z-10 flex justify-between items-center flex-wrap gap-2">
+        <h1 class="text-xl font-bold accent-underline">Órdenes Abiertas</h1>
+        <nav class="flex flex-wrap gap-3 text-sm items-center">
+            <a href="<?php echo $base_url; ?>home" class="btn-back hover:opacity-90" title="Regresar" aria-label="Regresar"><span
+                    class="icon icon-lg icon-gold" aria-hidden="true"><svg viewBox="0 0 24 24" width="1em" height="1em"
+                        fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></span></a>
+            <span class="hidden sm:inline">Hola,
+                <?php echo htmlspecialchars(SessionManager::get('user_nombre') ?? 'Usuario'); ?>
+            </span>
+            <a href="<?php echo $base_url; ?>home" class="hover:opacity-90" title="Inicio" aria-label="Inicio"><span
+                    class="icon icon-lg icon-gold" aria-hidden="true"><svg viewBox="0 0 24 24" width="1em" height="1em"
+                        fill="currentColor">
+                        <path d="M12 3l10 9h-3v9h-5v-6H10v6H5v-9H2l10-9z" />
+                    </svg></span></a>
+            <a href="#" id="logout-btn" class="hover:opacity-90" title="Cerrar sesión" aria-label="Cerrar sesión"><span
+                    aria-hidden="true" class="icon icon-lg icon-gold">⭕</span></a>
+        </nav>
+    </header>
+
+    <!-- Contenedor Principal -->
+    <main id="app-content" class="container mx-auto p-4 mt-20 flex-grow max-w-6xl">
+        <div class="bg-white p-6 rounded-lg shadow-xl form-card">
+
+            <div class="flex items-center gap-2 mb-4">
+                <a href="<?php echo $base_url; ?>home" class="btn-secondary px-3 py-1 text-sm inline-flex items-center gap-1">
+                    <span>←</span> Atrás
+                </a>
+            </div>
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <div>
+                    <h2 class="text-2xl font-semibold text-gray-800">Órdenes Abiertas</h2>
+                    <p class="text-sm text-gray-600 mt-1">Bandeja de órdenes pendientes o parciales con saldo de material
+                        por devolver, agrupadas por responsable.</p>
+                </div>
+                <button type="button" id="btn-actualizar" class="btn-primary px-4 py-2">Actualizar</button>
+            </div>
+
+            <p id="loading" class="text-center p-4 text-gray-500">Cargando bandeja...</p>
+
+            <div id="bandeja-contenido" style="display:none;">
+
+                <!-- Tarjetas KPI -->
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-label">Órdenes abiertas</div>
+                        <div class="kpi-value" id="kpi-ordenes">-</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Total adeudado (gr)</div>
+                        <div class="kpi-value" id="kpi-adeudado">-</div>
+                    </div>
+                </div>
+
+                <!-- Sección 1: Resumen por persona -->
+                <div class="table-section">
+                    <h3>Resumen por persona</h3>
+                    <div class="table-container">
+                        <table class="bandeja-table" id="tabla-resumen">
+                            <thead>
+                                <tr>
+                                    <th>Responsable</th>
+                                    <th class="num">Nº órdenes</th>
+                                    <th class="num">Total adeudado (gr)</th>
+                                    <th class="num">Oro adeudado (gr)</th>
+                                    <th>Orden más antigua</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-resumen">
+                                <tr>
+                                    <td colspan="5" class="text-center text-gray-500">Sin datos</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Sección 2: Órdenes -->
+                <div class="table-section">
+                    <h3>Órdenes</h3>
+                    <div class="table-container">
+                        <table class="bandeja-table" id="tabla-ordenes">
+                            <thead>
+                                <tr>
+                                    <th>Orden</th>
+                                    <th>Estado</th>
+                                    <th>Responsable</th>
+                                    <th>Proceso</th>
+                                    <th>Producto</th>
+                                    <th>Fecha</th>
+                                    <th class="num">Días abierta</th>
+                                    <th class="num">Saldo (gr)</th>
+                                    <th>Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-ordenes">
+                                <tr>
+                                    <td colspan="9" class="text-center text-gray-500">Sin datos</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="p-4 text-center text-gray-500 text-sm">
+        Sistema de Trazabilidad &copy;
+        <?php echo date('Y'); ?> -
+        by <a href="mailto:ganoderico@gmail.com" class="inline-flex items-center gap-0.5" title="Escribir a vibo"
+            aria-label="Escribir a vibo">
+            <span style="color:#FACC15; font-weight:700">v</span>
+            <span style="color:#3B82F6; font-weight:700">i</span>
+            <span style="color:#EF4444; font-weight:700">b</span>
+            <span style="color:#22C55E; font-weight:700">o</span>
+        </a>
+    </footer>
+
+    <script src="<?php echo $base_url; ?>frontend/assets/js/scripts.js?v=20261002b"></script>
+    <script>
+        const ESTADO_CONFIG = {
+            pendiente: { class: 'status-pending', text: 'PENDIENTE', color: 'amber' },
+            parcial: { class: 'status-partial', text: 'PARCIAL', color: 'blue' },
+            completado: { class: 'status-completed', text: 'COMPLETADO', color: 'green' },
+            cancelado: { class: 'status-cancelled', text: 'CANCELADO', color: 'red' },
+            merma_a_favor: { class: 'status-merma-favor', text: 'MERMA A FAVOR', color: 'purple' }
+        };
+
+        function fmtNum(n) {
+            if (n === null || n === undefined || n === '') return '-';
+            const val = parseFloat(n);
+            if (isNaN(val)) return '-';
+            return val.toFixed(2).replace('.', ',');
+        }
+
+        function formatDate(datetimeString) {
+            if (!datetimeString) return '-';
+            try {
+                const date = new Date(datetimeString.replace(' ', 'T'));
+                if (isNaN(date.getTime())) return datetimeString;
+                const pad = n => String(n).padStart(2, '0');
+                return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
+            } catch (e) {
+                return datetimeString;
+            }
+        }
+
+        function renderStatusBadge(estado) {
+            const cfg = ESTADO_CONFIG[estado] || ESTADO_CONFIG.pendiente;
+            return `<span class="status-badge ${cfg.class}">${cfg.text}</span>`;
+        }
+
+        function diasDesde(fechaStr) {
+            if (!fechaStr) return null;
+            const fecha = new Date(fechaStr.replace(' ', 'T'));
+            if (isNaN(fecha.getTime())) return null;
+            return Math.max(0, Math.floor((Date.now() - fecha.getTime()) / 86400000));
+        }
+
+        function renderResumen(filas) {
+            const tbody = document.getElementById('tbody-resumen');
+            if (!filas || filas.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-gray-500">Sin datos</td></tr>';
+                return;
+            }
+            // El backend ya ordena por total_adeudado DESC: resaltar la primera fila
+            tbody.innerHTML = '';
+            filas.forEach((f, idx) => {
+                const tr = document.createElement('tr');
+                if (idx === 0) tr.classList.add('top-deudor');
+                const dias = diasDesde(f.mas_antigua);
+                tr.innerHTML = `
+                    <td>${f.responsable || '-'}${idx === 0 ? '<span class="badge-mayor">Mayor adeudo</span>' : ''}</td>
+                    <td class="num">${f.ordenes !== undefined && f.ordenes !== null ? f.ordenes : '-'}</td>
+                    <td class="num">${fmtNum(f.total_adeudado)}</td>
+                    <td class="num">${fmtNum(f.oro_adeudado)}</td>
+                    <td>${f.mas_antigua ? formatDate(f.mas_antigua) : '-'}${dias !== null ? ` <span class="text-gray-500">(${dias} día${dias === 1 ? '' : 's'})</span>` : ''}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderOrdenes(filas) {
+            const tbody = document.getElementById('tbody-ordenes');
+            if (!filas || filas.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center text-gray-500">Sin datos</td></tr>';
+                return;
+            }
+            const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
+            tbody.innerHTML = '';
+            filas.forEach(o => {
+                const consecStr = String(o.consecutivo).padStart(4, '0');
+                const saldoNum = parseFloat(o.saldo) || 0;
+                const saldoClass = saldoNum > 0 ? 'saldo-pendiente' : 'saldo-cero';
+                const detalleUrl = base.replace(/\/$/, '') + '/trazabilidad_list?highlight=' + encodeURIComponent(consecStr);
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="font-mono font-bold text-teal-700">${consecStr}</td>
+                    <td>${renderStatusBadge(o.estado || 'pendiente')}</td>
+                    <td>${o.responsable || '-'}</td>
+                    <td>${o.proceso || '-'}</td>
+                    <td>${o.producto || '-'}</td>
+                    <td>${formatDate(o.fecha_creacion)}</td>
+                    <td class="num">${o.dias_abierta !== undefined && o.dias_abierta !== null ? o.dias_abierta : '-'}</td>
+                    <td class="num"><span class="${saldoClass}">${fmtNum(saldoNum)}</span></td>
+                    <td><a href="${detalleUrl}" class="btn-primary px-2 py-1 text-xs inline-block" style="background-color: #2563eb !important;" title="Ver detalle de la orden">Ver</a></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function cargarBandeja() {
+            const loading = document.getElementById('loading');
+            loading.classList.remove('hidden');
+            const result = await callApi('ordenes/bandeja', 'GET');
+            loading.classList.add('hidden');
+            if (!result.success) {
+                const msg = result.message || '';
+                if (/401/.test(msg)) {
+                    const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
+                    window.location.href = base;
+                    return;
+                }
+                showMessageModal('Error', msg || 'No se pudo cargar la bandeja de órdenes.', 'error');
+                return;
+            }
+            const data = result.data || {};
+            document.getElementById('kpi-ordenes').textContent =
+                (data.total_ordenes !== undefined && data.total_ordenes !== null) ? data.total_ordenes : '0';
+            document.getElementById('kpi-adeudado').textContent = fmtNum(data.total_adeudado);
+            renderResumen(data.por_responsable || []);
+            renderOrdenes(data.ordenes || []);
+            document.getElementById('bandeja-contenido').style.display = 'block';
+        }
+
+        window.onload = function () {
+            cargarBandeja();
+
+            document.getElementById('btn-actualizar').addEventListener('click', cargarBandeja);
+
+            // Listener de Logout
+            document.getElementById('logout-btn').addEventListener('click', async function (e) {
+                e.preventDefault();
+                const result = await callApi('logout', 'GET');
+                if (result.success) {
+                    const base = (typeof window !== 'undefined' && window.BASE_URL) ? window.BASE_URL : '/';
+                    window.location.href = base;
+                } else {
+                    showMessageModal('Error', 'No se pudo cerrar sesión.', 'error');
+                }
+            });
+        };
+    </script>
+</body>
+
+</html>

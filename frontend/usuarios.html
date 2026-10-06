@@ -16,6 +16,30 @@ $user_nombre = SessionManager::get('user_nombre') ?? 'Usuario';
     <meta name="current-user-id" content="<?php echo htmlspecialchars((string)(SessionManager::get('user_id') ?? '')); ?>">
     <title><?php echo $page_title; ?></title>
     <link rel="stylesheet" href="<?php echo $base_url; ?>frontend/assets/css/styles.css">
+    <style>
+        /* Fila atenuada para usuarios inactivos (el toggle de Estado queda visible) */
+        .fila-inactiva td { opacity: 0.45; }
+        .fila-inactiva td.col-estado { opacity: 1; }
+        .activo-check { width: 1.1rem; height: 1.1rem; cursor: pointer; }
+        /* Doble vista: tabla en desktop, tarjetas en móvil (patrón de trazabilidad_list) */
+        .mobile-only { display: none; }
+        .desktop-only { display: table; }
+        .mobile-card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        /* Tarjeta atenuada para usuarios inactivos (el toggle de Estado queda visible) */
+        .card-inactiva { opacity: 0.45; }
+        .card-inactiva .card-estado { opacity: 1; }
+        @media (max-width: 767px) {
+            .desktop-only { display: none !important; }
+            .mobile-only { display: block !important; }
+        }
+    </style>
 </head>
 <body class="bg-gray-200 flex flex-col min-h-screen">
     <header class="fixed top-0 left-0 right-0 p-4 shadow-md text-white z-10 flex justify-between items-center flex-wrap gap-2">
@@ -77,13 +101,15 @@ $user_nombre = SessionManager::get('user_nombre') ?? 'Usuario';
                 </div>
             </div>
             <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
+                <table class="min-w-full divide-y divide-gray-200 desktop-only">
                     <thead class="bg-gray-50">
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rol</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Ver reportes</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Creado</th>
                             <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                         </tr>
@@ -91,6 +117,7 @@ $user_nombre = SessionManager::get('user_nombre') ?? 'Usuario';
                     <tbody id="usuarios-body" class="bg-white divide-y divide-gray-200"></tbody>
                 </table>
             </div>
+            <div id="usuarios-cards" class="mobile-only"></div>
             <div class="flex items-center justify-between mt-4" id="pager" style="display:none;">
                 <button id="prev-page" class="px-3 py-1 bg-gray-200 rounded">Anterior</button>
                 <div id="page-info" class="text-sm text-gray-600">Página 1 de 1</div>
@@ -110,7 +137,7 @@ $user_nombre = SessionManager::get('user_nombre') ?? 'Usuario';
         </a>
     </footer>
 
-    <script src="<?php echo $base_url; ?>frontend/assets/js/scripts.js"></script>
+    <script src="<?php echo $base_url; ?>frontend/assets/js/scripts.js?v=20261002b"></script>
     <script>
         // ID del usuario actual desde meta en <head>
         (function(){
@@ -128,6 +155,7 @@ $user_nombre = SessionManager::get('user_nombre') ?? 'Usuario';
         const submitBtn = document.getElementById('submit-btn');
         const cancelBtn = document.getElementById('cancel-btn');
         const body = document.getElementById('usuarios-body');
+        const cardsContainer = document.getElementById('usuarios-cards');
         const loading = document.getElementById('loading');
         const filtro = document.getElementById('filtro');
         const rolInput = document.getElementById('usuario-rol');
@@ -144,8 +172,10 @@ $user_nombre = SessionManager::get('user_nombre') ?? 'Usuario';
 
         function renderRows(list) {
             body.innerHTML = '';
+            cardsContainer.innerHTML = '';
             if (!list || list.length === 0) {
-                body.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-500">Sin usuarios</td></tr>';
+                body.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-gray-500">Sin usuarios</td></tr>';
+                cardsContainer.innerHTML = '<p class="text-center py-4 text-gray-500">Sin usuarios</p>';
                 pager.style.display = 'none';
                 return;
             }
@@ -163,17 +193,36 @@ $user_nombre = SessionManager::get('user_nombre') ?? 'Usuario';
 
             slice.forEach(u => {
                 const tr = document.createElement('tr');
-                tr.className = 'hover:bg-gray-100';
                 const isOnlyAdmin = !!u.is_only_admin;
                 const isSelf = window.CURRENT_USER_ID && String(u.id) === String(window.CURRENT_USER_ID);
+                const activoNum = Number(u.activo) === 1 ? 1 : 0;
+                tr.className = 'hover:bg-gray-100' + (activoNum === 0 ? ' fila-inactiva' : '');
                 tr.innerHTML = `
                     <td class="px-6 py-3">${u.id}</td>
                     <td class="px-6 py-3">${u.nombre}</td>
                     <td class="px-6 py-3">${u.usuario}</td>
                     <td class="px-6 py-3">${(u.rol || 'operador')}${isOnlyAdmin ? ' <span class="text-xs text-gray-500">(Único admin)</span>' : ''}</td>
+                    <td class="px-6 py-3 text-center">
+                        <input type="checkbox" class="ver-reportes-check accent-teal-700 cursor-pointer"
+                            data-id="${u.id}" ${Number(u.ver_reportes) === 1 ? 'checked' : ''}
+                            title="Permitir que este usuario vea los reportes de merma">
+                    </td>
+                    <td class="px-6 py-3 text-center col-estado">
+                        ${isSelf
+                            ? '<span class="text-gray-400" title="No puedes desactivar tu propio usuario">—</span>'
+                            : `<input type="checkbox" class="activo-check cursor-pointer"
+                                data-id="${u.id}" ${activoNum === 1 ? 'checked' : ''}
+                                style="accent-color: ${activoNum === 1 ? '#0f766e' : '#dc2626'}"
+                                title="${activoNum === 1 ? 'Usuario activo (clic para desactivar)' : 'Usuario inactivo (clic para activar)'}">`
+                        }
+                    </td>
                     <td class="px-6 py-3">${u.fecha_creacion || '-'}</td>
                     <td class="px-6 py-3 text-center">
                         <button class="text-teal-600 hover:text-teal-900 mr-3 edit-btn" data-id="${u.id}" data-only-admin="${isOnlyAdmin}">Editar</button>
+                        ${isSelf
+                            ? '<span class="text-gray-400" title="No puedes restablecer tu propia clave desde aquí">—</span>'
+                            : `<button class="text-amber-600 hover:text-amber-900 mr-3 reset-btn" data-id="${u.id}" data-nombre="${u.nombre}" title="Generar una clave temporal para este usuario">🔑 Restablecer</button>`
+                        }
                         ${isOnlyAdmin
                             ? '<span class="text-gray-400" title="Protegido: no se puede eliminar">Protegido</span>'
                             : (isSelf
@@ -184,6 +233,50 @@ $user_nombre = SessionManager::get('user_nombre') ?? 'Usuario';
                     </td>
                 `;
                 body.appendChild(tr);
+
+                // Tarjeta móvil (mismos datos y acciones que la fila)
+                const card = document.createElement('div');
+                card.className = 'mobile-card' + (activoNum === 0 ? ' card-inactiva' : '');
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="font-semibold text-gray-900 text-lg">${u.nombre}</span>
+                        <span class="text-xs text-gray-400">ID ${u.id}</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-sm mb-3">
+                        <div class="col-span-2"><span class="text-gray-500">Usuario:</span> ${u.usuario}</div>
+                        <div><span class="text-gray-500">Rol:</span> ${(u.rol || 'operador')}${isOnlyAdmin ? ' <span class="text-xs text-gray-500">(Único admin)</span>' : ''}</div>
+                        <div><span class="text-gray-500">Creado:</span> ${u.fecha_creacion || '-'}</div>
+                    </div>
+                    <div class="flex items-center gap-4 text-sm mb-3 card-estado">
+                        <label class="flex items-center gap-1.5 cursor-pointer">
+                            <input type="checkbox" class="ver-reportes-check accent-teal-700 cursor-pointer"
+                                data-id="${u.id}" ${Number(u.ver_reportes) === 1 ? 'checked' : ''}
+                                title="Permitir que este usuario vea los reportes de merma">
+                            <span class="text-gray-600">Ver reportes</span>
+                        </label>
+                        ${isSelf
+                            ? '<span class="text-gray-400" title="No puedes desactivar tu propio usuario">—</span>'
+                            : `<label class="flex items-center gap-1.5 cursor-pointer">
+                                <input type="checkbox" class="activo-check cursor-pointer"
+                                    data-id="${u.id}" ${activoNum === 1 ? 'checked' : ''}
+                                    style="accent-color: ${activoNum === 1 ? '#0f766e' : '#dc2626'}"
+                                    title="${activoNum === 1 ? 'Usuario activo (clic para desactivar)' : 'Usuario inactivo (clic para activar)'}">
+                                <span class="text-gray-600">Activo</span>
+                               </label>`}
+                    </div>
+                    <div class="flex flex-wrap gap-3 text-sm">
+                        <button class="text-teal-600 hover:text-teal-900 edit-btn" data-id="${u.id}" data-only-admin="${isOnlyAdmin}">Editar</button>
+                        ${isSelf
+                            ? '<span class="text-gray-400" title="No puedes restablecer tu propia clave desde aquí">—</span>'
+                            : `<button class="text-amber-600 hover:text-amber-900 reset-btn" data-id="${u.id}" data-nombre="${u.nombre}" title="Generar una clave temporal para este usuario">🔑 Restablecer</button>`}
+                        ${isOnlyAdmin
+                            ? '<span class="text-gray-400" title="Protegido: no se puede eliminar">Protegido</span>'
+                            : (isSelf
+                                ? '<span class="text-gray-400" title="No puedes eliminar tu propio usuario">Protegido</span>'
+                                : `<button class="text-red-600 hover:text-red-900 delete-btn" data-id="${u.id}" data-nombre="${u.nombre}">Eliminar</button>`)}
+                    </div>
+                `;
+                cardsContainer.appendChild(card);
             });
         }
 
@@ -255,8 +348,8 @@ $user_nombre = SessionManager::get('user_nombre') ?? 'Usuario';
             }
         });
 
-        // Editar / Eliminar
-        body.addEventListener('click', (e) => {
+        // Editar / Eliminar / Restablecer (misma delegación en tabla y tarjetas)
+        async function handleListClick(e) {
             const t = e.target;
             if (t.classList.contains('edit-btn')) {
                 const id = t.dataset.id;
@@ -280,7 +373,7 @@ $user_nombre = SessionManager::get('user_nombre') ?? 'Usuario';
             if (t.classList.contains('delete-btn')) {
                 const id = t.dataset.id;
                 const nombre = t.dataset.nombre;
-                if (!confirm(`¿Eliminar usuario ${nombre} (ID ${id})?`)) return;
+                if (!await confirmModal('Eliminar Usuario', `¿Eliminar usuario ${nombre} (ID ${id})?`, { danger: true })) return;
                 callApi(API, 'DELETE', { id }).then(res => {
                     if (res.success) {
                         showMessageModal('Éxito', res.message || 'Eliminado', 'success');
@@ -290,7 +383,75 @@ $user_nombre = SessionManager::get('user_nombre') ?? 'Usuario';
                     }
                 });
             }
-        });
+            if (t.classList.contains('reset-btn')) {
+                const id = t.dataset.id;
+                const nombre = t.dataset.nombre;
+                if (!await confirmModal('Restablecer Clave', `¿Restablecer la clave de ${nombre}?\n\nSe generará una clave temporal que se mostrará UNA sola vez.`, { danger: true })) return;
+                callApi(`usuarios/${id}/reset-clave`, 'POST').then(res => {
+                    if (res.success && res.temp_clave) {
+                        showMessageModal('Clave restablecida',
+                            `Clave temporal para ${nombre}: ${res.temp_clave}.\n\nComuníquesela al usuario y pídale que la cambie al ingresar.`,
+                            'success');
+                    } else {
+                        showMessageModal('Error', res.message || 'No se pudo restablecer la clave.', 'error');
+                    }
+                });
+            }
+        }
+        // La misma delegación aplica a la tabla (desktop) y a las tarjetas (móvil)
+        body.addEventListener('click', handleListClick);
+        cardsContainer.addEventListener('click', handleListClick);
+
+        // Cambiar permiso "ver reportes" (checkbox por usuario)
+        async function handleVerReportesChange(e) {
+            const t = e.target;
+            if (!t.classList.contains('ver-reportes-check')) return;
+            const id = t.dataset.id;
+            const nuevoValor = t.checked ? 1 : 0;
+            const valorAnterior = nuevoValor === 1 ? 0 : 1;
+            t.disabled = true;
+            const res = await callApi(API, 'PUT', { id, ver_reportes: nuevoValor });
+            t.disabled = false;
+            if (res.success) {
+                const u = dataCache.find(x => String(x.id) === String(id));
+                if (u) u.ver_reportes = nuevoValor;
+                showMessageModal('Éxito', res.message || 'Permiso de reportes actualizado.', 'success');
+            } else {
+                t.checked = valorAnterior === 1; // revertir si falla
+                showMessageModal('Error', res.message || 'No se pudo actualizar el permiso de reportes.', 'error');
+            }
+        }
+        body.addEventListener('change', handleVerReportesChange);
+        cardsContainer.addEventListener('change', handleVerReportesChange);
+
+        // Cambiar estado activo/inactivo (checkbox por usuario)
+        async function handleActivoChange(e) {
+            const t = e.target;
+            if (!t.classList.contains('activo-check')) return;
+            const id = t.dataset.id;
+            const nuevoValor = t.checked ? 1 : 0;
+            const valorAnterior = nuevoValor === 1 ? 0 : 1;
+            t.disabled = true;
+            const res = await callApi(API, 'PUT', { id, activo: nuevoValor });
+            t.disabled = false;
+            if (res.success) {
+                const u = dataCache.find(x => String(x.id) === String(id));
+                if (u) u.activo = nuevoValor;
+                // Actualizar atenuación de la fila/tarjeta y color del toggle
+                const tr = t.closest('tr');
+                if (tr) tr.classList.toggle('fila-inactiva', nuevoValor === 0);
+                const card = t.closest('.mobile-card');
+                if (card) card.classList.toggle('card-inactiva', nuevoValor === 0);
+                t.style.accentColor = nuevoValor === 1 ? '#0f766e' : '#dc2626';
+                t.title = nuevoValor === 1 ? 'Usuario activo (clic para desactivar)' : 'Usuario inactivo (clic para activar)';
+                showMessageModal('Éxito', res.message || 'Estado del usuario actualizado.', 'success');
+            } else {
+                t.checked = valorAnterior === 1; // revertir si falla
+                showMessageModal('Error', res.message || 'No se pudo actualizar el estado del usuario.', 'error');
+            }
+        }
+        body.addEventListener('change', handleActivoChange);
+        cardsContainer.addEventListener('change', handleActivoChange);
 
         cancelBtn.addEventListener('click', () => {
             idInput.value = '';
@@ -318,22 +479,9 @@ $user_nombre = SessionManager::get('user_nombre') ?? 'Usuario';
             if (page < totalPages) { page++; renderRows(filteredCache); }
         });
 
-        // Cambiar mi contraseña (propio)
-        changePassBtn.addEventListener('click', async () => {
-            const current = prompt('Introduce tu contraseña actual:');
-            if (current === null) return;
-            const newPass = prompt('Nueva contraseña (min 8 caracteres):');
-            if (newPass === null) return;
-            if (newPass.length < 8) { showMessageModal('Validación', 'La nueva contraseña debe tener al menos 8 caracteres.', 'info'); return; }
-            const confirm = prompt('Confirmar nueva contraseña:');
-            if (confirm === null) return;
-            if (newPass !== confirm) { showMessageModal('Validación', 'La confirmación no coincide.', 'info'); return; }
-            const res = await callApi('change-password', 'POST', { current_password: current, new_password: newPass, confirm_password: confirm });
-            if (res.success) {
-                showMessageModal('Éxito', res.message || 'Contraseña actualizada.', 'success');
-            } else {
-                showMessageModal('Error', res.message || 'No se pudo actualizar la contraseña.', 'error');
-            }
+        // Cambiar mi contraseña (propio) — modal con inputs, sin prompt nativo
+        changePassBtn.addEventListener('click', () => {
+            openChangePasswordModal();
         });
 
         // Logout

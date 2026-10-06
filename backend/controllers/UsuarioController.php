@@ -18,9 +18,14 @@ class UsuarioController {
             }
         }
         try {
-            $stmt = $this->db->prepare("SELECT id, nombre, usuario, rol, fecha_creacion FROM Usuarios ORDER BY id DESC");
+            $stmt = $this->db->prepare("SELECT id, nombre, usuario, rol, ver_reportes, activo, fecha_creacion FROM Usuarios ORDER BY id DESC");
             $stmt->execute();
             $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($usuarios as &$u) {
+                $u['ver_reportes'] = (int)($u['ver_reportes'] ?? 0);
+                $u['activo'] = (int)($u['activo'] ?? 1);
+            }
+            unset($u);
             // Marcar único admin
             $countStmt = $this->db->prepare("SELECT COUNT(*) AS c FROM Usuarios WHERE rol = 'admin'");
             $countStmt->execute();
@@ -55,6 +60,7 @@ class UsuarioController {
         $usuario = trim($data['usuario'] ?? '');
         $clave = $data['clave'] ?? '';
         $rol = in_array(($data['rol'] ?? 'operador'), ['admin','operador'], true) ? $data['rol'] : 'operador';
+        $ver_reportes = isset($data['ver_reportes']) ? (int)(bool)$data['ver_reportes'] : 0;
 
         if ($nombre === '' || $usuario === '' || $clave === '') {
             http_response_code(400);
@@ -73,8 +79,8 @@ class UsuarioController {
             }
 
             $hash = password_hash($clave, PASSWORD_BCRYPT);
-            $stmt = $this->db->prepare("INSERT INTO Usuarios (nombre, usuario, clave, rol) VALUES (?, ?, ?, ?)");
-            $ok = $stmt->execute([$nombre, $usuario, $hash, $rol]);
+            $stmt = $this->db->prepare("INSERT INTO Usuarios (nombre, usuario, clave, rol, ver_reportes) VALUES (?, ?, ?, ?, ?)");
+            $ok = $stmt->execute([$nombre, $usuario, $hash, $rol, $ver_reportes]);
             if ($ok) {
                 http_response_code(201);
                 echo json_encode(['success' => true, 'message' => 'Usuario creado correctamente.'], JSON_UNESCAPED_UNICODE);
@@ -104,6 +110,75 @@ class UsuarioController {
         $usuario = trim($data['usuario'] ?? '');
         $clave = $data['clave'] ?? null; // opcional
         $rol = isset($data['rol']) && in_array($data['rol'], ['admin','operador'], true) ? $data['rol'] : null;
+        $ver_reportes = isset($data['ver_reportes']) ? (int)(bool)$data['ver_reportes'] : null;
+        $activo = isset($data['activo']) ? (int)(bool)$data['activo'] : null;
+
+        // Actualización parcial: permisos "ver reportes" y/o "activo" (toggle desde la tabla de usuarios)
+        if ($nombre === '' && $usuario === '' && ($ver_reportes !== null || $activo !== null)) {
+            if ($id <= 0) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'ID obligatorio.'], JSON_UNESCAPED_UNICODE);
+                return;
+            }
+            try {
+                $stmtInfo = $this->db->prepare("SELECT id, rol FROM Usuarios WHERE id = ?");
+                $stmtInfo->execute([$id]);
+                $info = $stmtInfo->fetch(PDO::FETCH_ASSOC);
+                if (!$info) {
+                    http_response_code(404);
+                    echo json_encode(['success' => false, 'message' => 'Usuario no encontrado.'], JSON_UNESCAPED_UNICODE);
+                    return;
+                }
+
+                // Protección al desactivar: no permitir desactivarse a sí mismo
+                if ($activo === 0 && class_exists('SessionManager')) {
+                    $selfId = (int)(SessionManager::get('user_id') ?? 0);
+                    if ($selfId === $id) {
+                        http_response_code(400);
+                        echo json_encode(['success' => false, 'message' => 'No puedes desactivar tu propio usuario.'], JSON_UNESCAPED_UNICODE);
+                        return;
+                    }
+                }
+
+                // Protección al desactivar: no dejar el sistema sin admins activos
+                if ($activo === 0 && ($info['rol'] ?? 'operador') === 'admin') {
+                    $countStmt = $this->db->prepare("SELECT COUNT(*) AS c FROM Usuarios WHERE rol = 'admin' AND activo = 1 AND id <> ?");
+                    $countStmt->execute([$id]);
+                    $row = $countStmt->fetch(PDO::FETCH_ASSOC);
+                    $adminsActivos = (int)($row['c'] ?? 0);
+                    if ($adminsActivos <= 0) {
+                        http_response_code(400);
+                        echo json_encode(['success' => false, 'message' => 'No puedes desactivar al último administrador activo. Activa o crea otro admin primero.'], JSON_UNESCAPED_UNICODE);
+                        return;
+                    }
+                }
+
+                if ($ver_reportes !== null) {
+                    $stmtVR = $this->db->prepare("UPDATE Usuarios SET ver_reportes = ? WHERE id = ?");
+                    $stmtVR->execute([$ver_reportes, $id]);
+                }
+                if ($activo !== null) {
+                    $stmtAC = $this->db->prepare("UPDATE Usuarios SET activo = ? WHERE id = ?");
+                    $stmtAC->execute([$activo, $id]);
+                    if (class_exists('Logger')) {
+                        Logger::info('Estado activo de usuario actualizado', ['user_id' => $id, 'activo' => $activo, 'admin_id' => SessionManager::get('user_id')]);
+                    }
+                }
+
+                $mensaje = 'Usuario actualizado correctamente.';
+                if ($ver_reportes !== null && $activo === null) {
+                    $mensaje = 'Permiso de reportes actualizado.';
+                } elseif ($activo !== null && $ver_reportes === null) {
+                    $mensaje = $activo === 1 ? 'Usuario activado correctamente.' : 'Usuario desactivado correctamente.';
+                }
+                http_response_code(200);
+                echo json_encode(['success' => true, 'message' => $mensaje], JSON_UNESCAPED_UNICODE);
+            } catch (PDOException $e) {
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Error al actualizar usuario: ' . $e->getMessage()]);
+            }
+            return;
+        }
 
         if ($id <= 0 || $nombre === '' || $usuario === '') {
             http_response_code(400);
@@ -157,6 +232,11 @@ class UsuarioController {
                     $stmt = $this->db->prepare("UPDATE Usuarios SET nombre = ?, usuario = ? WHERE id = ?");
                     $ok = $stmt->execute([$nombre, $usuario, $id]);
                 }
+            }
+
+            if ($ver_reportes !== null) {
+                $stmtVR = $this->db->prepare("UPDATE Usuarios SET ver_reportes = ? WHERE id = ?");
+                $stmtVR->execute([$ver_reportes, $id]);
             }
 
             if ($ok && $stmt->rowCount() >= 0) {
@@ -228,6 +308,55 @@ class UsuarioController {
         } catch (PDOException $e) {
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Error al eliminar usuario: ' . $e->getMessage()]);
+        }
+    }
+
+    // RESET DE CLAVE POR ADMIN (POST /api/usuarios/{id}/reset-clave)
+    // Genera una clave temporal legible de 8 caracteres y la devuelve para que
+    // el administrador la comunique al usuario por otro canal.
+    public function resetClave($data) {
+        header('Content-Type: application/json; charset=utf-8');
+        // Solo admin
+        if (class_exists('SessionManager')) {
+            $rol = SessionManager::get('user_rol') ?? 'operador';
+            if ($rol !== 'admin') {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'message' => 'Acceso denegado.'], JSON_UNESCAPED_UNICODE);
+                return;
+            }
+        }
+        $id = isset($data['id']) ? (int)$data['id'] : 0;
+        if ($id <= 0) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'ID inválido.'], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        // Caracteres legibles sin ambiguos (sin 0, O, 1, l, I)
+        $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+        $maxIdx = strlen($chars) - 1;
+        $temp = '';
+        for ($i = 0; $i < 8; $i++) {
+            $temp .= $chars[random_int(0, $maxIdx)];
+        }
+
+        try {
+            $hash = password_hash($temp, PASSWORD_BCRYPT);
+            $stmt = $this->db->prepare("UPDATE Usuarios SET clave = ? WHERE id = ?");
+            $ok = $stmt->execute([$hash, $id]);
+            if ($ok && $stmt->rowCount() > 0) {
+                if (class_exists('Logger')) {
+                    Logger::info('Clave temporal generada por admin', ['user_id' => $id, 'admin_id' => SessionManager::get('user_id')]);
+                }
+                http_response_code(200);
+                echo json_encode(['success' => true, 'temp_clave' => $temp], JSON_UNESCAPED_UNICODE);
+            } else {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'message' => 'Usuario no encontrado.'], JSON_UNESCAPED_UNICODE);
+            }
+        } catch (PDOException $e) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Error al resetear la clave: ' . $e->getMessage()]);
         }
     }
 }

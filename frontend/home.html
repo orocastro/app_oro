@@ -63,6 +63,20 @@ $user_nombre = SessionManager::get('user_nombre') ?? 'Usuario';
                 <p class="text-sm text-gray-600">Consulta la tabla histórica de todos los movimientos.</p>
             </a>
 
+            <!-- Opción: Órdenes Abiertas - visible para todos los usuarios logueados -->
+            <a href="<?php echo $base_url; ?>bandeja" class="nav-card h-full">
+                <div class="text-4xl mb-4 text-teal-600">📋</div>
+                <h3 class="text-xl font-semibold mb-2">Órdenes Abiertas</h3>
+                <p class="text-sm text-gray-600">Bandeja de órdenes pendientes y material adeudado por persona.</p>
+            </a>
+
+            <!-- Opción: Reportes de Merma - visible para admin o usuarios con permiso ver_reportes -->
+            <a href="<?php echo $base_url; ?>reportes" class="nav-card h-full" id="card-reportes" style="display:none;">
+                <div class="text-4xl mb-4 text-teal-600">📊</div>
+                <h3 class="text-xl font-semibold mb-2">Reportes</h3>
+                <p class="text-sm text-gray-600">Análisis de merma por persona, proceso y producto.</p>
+            </a>
+
             <!-- Opción 3: CRUD Responsables (Paso 4) - solo visible si admin -->
             <a href="<?php echo $base_url; ?>responsables" class="nav-card h-full" id="card-responsables" style="display:none;">
                 <div class="text-4xl mb-4 text-teal-600">🧑‍🏭</div>
@@ -115,7 +129,7 @@ $user_nombre = SessionManager::get('user_nombre') ?? 'Usuario';
     </footer>
 
     <!-- Incluimos el script principal -->
-    <script src="<?php echo $base_url; ?>frontend/assets/js/scripts.js"></script>
+    <script src="<?php echo $base_url; ?>frontend/assets/js/scripts.js?v=20261002b"></script>
     <script>
         // Lógica de Logout
         document.getElementById('logout-btn').addEventListener('click', async function (e) {
@@ -144,11 +158,25 @@ $user_nombre = SessionManager::get('user_nombre') ?? 'Usuario';
                 });
                 
                 if (response.ok) {
-                    // Si puede acceder a usuarios, es admin - mostrar ambas tarjetas
+                    // Si puede acceder a usuarios, es admin - mostrar ambas tarjetas y la de reportes
                     const cardUsuarios = document.getElementById('card-usuarios');
                     const cardResponsables = document.getElementById('card-responsables');
+                    const cardReportes = document.getElementById('card-reportes');
                     if (cardUsuarios) cardUsuarios.style.display = 'block';
                     if (cardResponsables) cardResponsables.style.display = 'block';
+                    if (cardReportes) cardReportes.style.display = 'block';
+                } else {
+                    // No es admin: verificar silenciosamente si tiene permiso ver_reportes
+                    // (la API devuelve 403 si no está autorizado; en ese caso la tarjeta queda oculta)
+                    callApi('reportes/merma', 'GET').then(res => {
+                        if (res.success) {
+                            const cardReportes = document.getElementById('card-reportes');
+                            if (cardReportes) cardReportes.style.display = 'block';
+                        }
+                        // Si 403/sin éxito: comportamiento silencioso, tarjeta oculta
+                    }).catch(() => {
+                        // Error de red: comportamiento silencioso
+                    });
                 }
                 // Si no es admin (403), simplemente no mostramos las tarjetas (comportamiento silencioso)
             } catch (error) {
@@ -157,23 +185,10 @@ $user_nombre = SessionManager::get('user_nombre') ?? 'Usuario';
             }
         })();
 
-        // Cambiar contraseña propia
-        document.getElementById('btn-change-pass').addEventListener('click', async (e) => {
+        // Cambiar contraseña propia (modal con inputs, sin prompt nativo)
+        document.getElementById('btn-change-pass').addEventListener('click', (e) => {
             e.preventDefault();
-            const current = prompt('Introduce tu contraseña actual:');
-            if (current === null) return;
-            const newPass = prompt('Nueva contraseña (min 8 caracteres):');
-            if (newPass === null) return;
-            if (newPass.length < 8) { showMessageModal('Validación', 'La nueva contraseña debe tener al menos 8 caracteres.', 'info'); return; }
-            const confirm = prompt('Confirmar nueva contraseña:');
-            if (confirm === null) return;
-            if (newPass !== confirm) { showMessageModal('Validación', 'La confirmación no coincide.', 'info'); return; }
-            const r = await callApi('change-password', 'POST', { current_password: current, new_password: newPass, confirm_password: confirm });
-            if (r.success) {
-                showMessageModal('Éxito', r.message || 'Contraseña actualizada.', 'success');
-            } else {
-                showMessageModal('Error', r.message || 'No se pudo actualizar la contraseña.', 'error');
-            }
+            openChangePasswordModal();
         });
     </script>
 </body>
